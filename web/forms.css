@@ -1,0 +1,166 @@
+.db-pill {
+  margin-left: auto;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--st-ramp-3);
+}
+
+.form-panel {
+  display: none;
+  background: var(--st-white);
+  margin-bottom: 20px;
+}
+
+.form-panel > h3 {
+  background: var(--st-navy);
+  color: var(--st-white);
+  font-size: 15px;
+  padding: 12px 16px;
+}
+
+.form-panel.is-open {
+  display: block;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field input,
+.field select,
+.field textarea {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--st-navy);
+  border: 1px solid var(--st-gray-2);
+  background: var(--st-white);
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
+.field.span-2 {
+  grid-column: span 2;
+}
+
+.field.span-3 {
+  grid-column: span 3;
+}
+
+.checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-weight: 400;
+}
+
+.actions {
+  padding: 0 16px 16px;
+}
+
+.actions button {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  border: 0;
+  background: var(--st-yellow);
+  color: var(--st-navy);
+  min-height: 44px;
+  padding: 0 20px;
+  cursor: pointer;
+}
+
+.banner {
+  display: none;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.banner.is-on {
+  display: block;
+}
+
+.banner.error {
+  background: var(--st-gray-1);
+  color: var(--st-navy);
+}
+
+.results {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  background: var(--st-white);
+}
+
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--st-navy);
+  color: var(--st-white);
+  padding: 12px 16px;
+}
+
+.card:first-child .card-head {
+  background: var(--st-yellow);
+  color: var(--st-navy);
+}
+
+.card-head strong {
+  font-size: 16px;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 16px 0;
+}
+
+.facts span {
+  background: var(--st-gray-1);
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px 16px 16px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.meta {
+  padding: 0 16px 16px;
+  color: var(--st-slate);
+  font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  .form-grid,
+  .lists {
+    grid-template-columns: 1fr;
+  }
+
+  .field.span-2,
+  .field.span-3 {
+    grid-column: span 1;
+  }
+}

@@ -1,0 +1,273 @@
+:root {
+  --st-navy: #03234b;
+  --st-yellow: #ffd200;
+  --st-cyan: #3cb4e6;
+  --st-slate: #425978;
+  --st-ramp-2: #8091a5;
+  --st-ramp-3: #c0c9ce;
+  --st-gray-1: #eeeff1;
+  --st-gray-2: #dbdee1;
+  --st-white: #ffffff;
+  --page: 1120px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  background: var(--st-gray-1);
+  color: var(--st-navy);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.hero {
+  position: relative;
+  background: var(--st-navy);
+  color: var(--st-white);
+  overflow: hidden;
+  padding: 28px 0 0;
+}
+
+.hero-accent {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 52px;
+  background: var(--st-yellow);
+}
+
+.hero-inner {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 0 28px 36px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  margin-bottom: 28px;
+}
+
+.brand-mark {
+  width: 56px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--st-white);
+  color: var(--st-white);
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.04em;
+}
+
+.brand-name {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--st-ramp-3);
+}
+
+.yellow-bar {
+  width: min(100%, 860px);
+  margin-left: auto;
+  background: var(--st-yellow);
+  color: var(--st-navy);
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  padding: 18px 28px;
+}
+
+.yellow-bar h1 {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.hero-lead {
+  margin-top: 28px;
+  max-width: 640px;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--st-white);
+}
+
+.message-bar {
+  background: var(--st-cyan);
+  color: var(--st-white);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.35;
+  padding: 16px 28px;
+}
+
+.message-bar span {
+  display: block;
+  max-width: var(--page);
+  margin: 0 auto;
+}
+
+.page {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 36px 28px 56px;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+.modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.mode {
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  background: var(--st-white);
+  color: var(--st-navy);
+  min-height: 168px;
+  padding: 0;
+  font-family: inherit;
+}
+
+.mode-head {
+  background: var(--st-navy);
+  color: var(--st-white);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 16px;
+}
+
+.mode:nth-child(2) .mode-head {
+  background: var(--st-slate);
+}
+
+.mode:nth-child(3) .mode-head {
+  background: var(--st-ramp-2);
+}
+
+.mode-body {
+  background: var(--st-gray-1);
+  padding: 14px 16px 18px;
+  font-size: 14px;
+  line-height: 1.45;
+  min-height: 108px;
+}
+
+.mode.is-active .mode-head {
+  background: var(--st-yellow);
+  color: var(--st-navy);
+}
+
+.stage {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.panel {
+  background: var(--st-white);
+}
+
+.panel h3 {
+  background: var(--st-navy);
+  color: var(--st-white);
+  font-size: 15px;
+  padding: 12px 16px;
+}
+
+.panel pre,
+.panel .copy {
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.panel pre {
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--st-gray-1);
+}
+
+.guards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.guard {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  background: var(--st-gray-1);
+}
+
+.guard b {
+  background: var(--st-navy);
+  color: var(--st-white);
+  padding: 12px 14px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+}
+
+.guard p {
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.cta {
+  margin-top: 28px;
+  background: var(--st-yellow);
+  color: var(--st-navy);
+  padding: 18px 20px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+footer {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 0 28px 28px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--st-slate);
+  font-size: 12px;
+}
+
+@media (max-width: 860px) {
+  .yellow-bar h1 {
+    font-size: 28px;
+  }
+
+  .modes,
+  .stage,
+  .guard {
+    grid-template-columns: 1fr;
+  }
+
+  .message-bar {
+    font-size: 16px;
+  }
+}

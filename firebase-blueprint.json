@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "MacroInsight": {
+      "title": "MacroInsight",
+      "description": "Macro insight document",
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "description": "Insight content"
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "Unix timestamp in milliseconds"
+        }
+      },
+      "required": ["content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "macroInsights": {
+      "schema": {
+        "$ref": "MacroInsight"
+      },
+      "description": "Collection of macro insights"
+    }
+  }
+}

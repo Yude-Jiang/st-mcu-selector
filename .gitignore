@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+reports/
+.DS_Store
+*.log
+data/
+__pycache__/
+.pytest_cache/
+.mcp.json
+.claude/

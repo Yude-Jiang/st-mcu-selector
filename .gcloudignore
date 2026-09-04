@@ -1,0 +1,15 @@
+.git
+.github
+.claude
+node_modules
+coverage
+reports
+docs
+scripts
+tests
+data
+__pycache__
+.pytest_cache
+*.md
+.DS_Store
+*.log

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ST MCU Selector | STMicroelectronics</title>
+  <meta name="description" content="ST MCU Selector：按必须满足的规格、已核实的竞品参数或 STM32 订货号，从意法半导体公开 MCU 数据库给出最多三个候选。结果是短名单，设计前需核对 datasheet。">
+  <meta name="keywords" content="ST MCU Selector, STM32, MCU 选型, 订货号, 竞品对照">
+  <meta property="og:title" content="ST MCU Selector | STMicroelectronics">
+  <meta property="og:description" content="ST MCU Selector：按必须满足的规格、已核实的竞品参数或 STM32 订货号，从意法半导体公开 MCU 数据库给出最多三个候选。结果是短名单，设计前需核对 datasheet。">
+  <meta name="twitter:title" content="ST MCU Selector | STMicroelectronics">
+  <meta name="twitter:description" content="ST MCU Selector：按必须满足的规格、已核实的竞品参数或 STM32 订货号，从意法半导体公开 MCU 数据库给出最多三个候选。结果是短名单，设计前需核对 datasheet。">
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./forms.css">
+</head>
+<body>
+  <div id="root">
+    <header class="hero">
+      <div class="hero-accent" aria-hidden="true"></div>
+      <div class="hero-inner">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">ST</div>
+          <p class="brand-name">STMicroelectronics</p>
+          <p class="db-pill" id="db-status">器件库加载中</p>
+        </div>
+        <div class="yellow-bar">
+          <h1>ST MCU Selector</h1>
+        </div>
+        <p class="hero-lead">填写必须满足的规格，或对照已核实的竞品参数，得到最多三个订货号。这是短名单，不是设计签核。</p>
+      </div>
+      <p class="message-bar">
+        <span>数据库匹配只给候选；封装引脚、外设并发、认证、价格和供货仍须核对当前 datasheet。</span>
+      </p>
+    </header>
+
+    <main class="page">
+      <h2>选择任务</h2>
+      <div class="modes" role="tablist">
+        <button class="mode is-active" type="button" data-mode="requirements">
+          <div class="mode-head">按需求推荐</div>
+          <div class="mode-body">频率、Flash、封装、温度和接口写成必须条件，适合电机控制和工业规格。</div>
+        </button>
+        <button class="mode" type="button" data-mode="competitor">
+          <div class="mode-head">竞品对照</div>
+          <div class="mode-body">必须提供官方 datasheet 或已核实规格。不会根据竞品料号猜测参数。</div>
+        </button>
+        <button class="mode" type="button" data-mode="inspect">
+          <div class="mode-head">查看订货号</div>
+          <div class="mode-body">输入 STM32 订货号，查看库中的封装、温度和接口字段。</div>
+        </button>
+      </div>
+
+      <p class="banner" id="banner"></p>
+
+      <form id="form-requirements" class="form-panel is-open">
+        <h3>按需求推荐</h3>
+        <div class="form-grid">
+          <label class="field">应用
+            <select name="application">
+              <option value="">不指定</option>
+              <option value="motor_control">电机控制</option>
+              <option value="power_conversion">电源变换</option>
+              <option value="bms">电池管理</option>
+              <option value="industrial_control">工业控制</option>
+              <option value="iot">物联网</option>
+            </select>
+          </label>
+          <label class="field">主频至少 (MHz)
+            <input name="frequency_mhz" type="number" min="1" placeholder="例如 170">
+          </label>
+          <label class="field">Flash 至少 (KB)
+            <input name="flash_kb" type="number" min="1" placeholder="例如 512">
+          </label>
+          <label class="field">RAM 至少 (KB)
+            <input name="ram_kb" type="number" min="1">
+          </label>
+          <label class="field">引脚数不超过
+            <input name="pin_count" type="number" min="8" placeholder="例如 64">
+          </label>
+          <label class="field">封装
+            <select name="package_type">
+              <option value="">不限制</option>
+              <option value="LQFP">LQFP</option>
+              <option value="QFN">QFN</option>
+              <option value="BGA">BGA</option>
+              <option value="WLCSP">WLCSP</option>
+            </select>
+          </label>
+          <label class="field">最高工作温度至少 (°C)
+            <input name="temperature_max_c" type="number" placeholder="例如 125">
+          </label>
+          <label class="field">FDCAN 至少
+            <input name="fdcan" type="number" min="0" placeholder="例如 1">
+          </label>
+          <label class="field">缺字段策略
+            <select name="unknown_policy">
+              <option value="allow_risk">保留并标出风险</option>
+              <option value="exclude">库中无证据则排除</option>
+            </select>
+          </label>
+        </div>
+        <div class="actions"><button type="submit">给出短名单</button></div>
+      </form>
+
+      <form id="form-competitor" class="form-panel">
+        <h3>竞品对照</h3>
+        <div class="form-grid">
+          <label class="field">厂商
+            <input name="manufacturer" required placeholder="例如 NXP">
+          </label>
+          <label class="field">竞品订货号
+            <input name="part_number" required>
+          </label>
+          <label class="field span-3">规格来源（datasheet 链接、版本或页码）
+            <input name="source_note" required minlength="5" placeholder="必须填写已核实来源，不能留空">
+          </label>
+          <label class="field">主频 (MHz)
+            <input name="frequency_mhz" type="number">
+          </label>
+          <label class="field">Flash (KB)
+            <input name="flash_kb" type="number">
+          </label>
+          <label class="field">RAM (KB)
+            <input name="ram_kb" type="number">
+          </label>
+          <label class="field">引脚数
+            <input name="pin_count" type="number">
+          </label>
+          <label class="field">封装
+            <input name="package_type" placeholder="例如 LQFP">
+          </label>
+          <label class="field">FDCAN
+            <input name="fdcan" type="number">
+          </label>
+        </div>
+        <div class="actions"><button type="submit">对照相近 STM32</button></div>
+      </form>
+
+      <form id="form-inspect" class="form-panel">
+        <h3>查看订货号</h3>
+        <div class="form-grid">
+          <label class="field span-2">STM32 订货号
+            <input name="part_number" required minlength="3" placeholder="例如 STM32G474RET3">
+          </label>
+        </div>
+        <div class="actions"><button type="submit">查看这颗料</button></div>
+      </form>
+
+      <section id="results" class="results" aria-live="polite"></section>
+    </main>
+
+    <footer>
+      <span>ST MCU Selector · 公开 MCU 数据库短名单</span>
+      <span>STMicroelectronics. All trademarks are the property of their respective owners.</span>
+    </footer>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>

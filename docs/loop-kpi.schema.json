@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://internal-hr.example/schemas/loop-kpi.schema.json",
+  "title": "Loop Engineering KPI Weekly Snapshot",
+  "type": "object",
+  "required": [
+    "week",
+    "generatedAt",
+    "source",
+    "deliveryVelocity",
+    "quality",
+    "deliveryReliability"
+  ],
+  "properties": {
+    "week": {
+      "type": "string",
+      "description": "ISO week label, e.g. 2026-W25"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source": {
+      "type": "object",
+      "required": ["gitRange", "environment"],
+      "properties": {
+        "gitRange": {
+          "type": "string",
+          "description": "Revision range used for report aggregation"
+        },
+        "environment": {
+          "type": "string",
+          "enum": ["local", "ci", "staging", "production"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "deliveryVelocity": {
+      "type": "object",
+      "required": ["commits", "activeContributors", "specToCodeLeadTimeHours"],
+      "properties": {
+        "commits": { "type": "number", "minimum": 0 },
+        "activeContributors": { "type": "number", "minimum": 0 },
+        "specToCodeLeadTimeHours": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "quality": {
+      "type": "object",
+      "required": ["lintPassRate", "testPassRate", "coveragePercent", "contractPassRate"],
+      "properties": {
+        "lintPassRate": { "type": "number", "minimum": 0, "maximum": 100 },
+        "testPassRate": { "type": "number", "minimum": 0, "maximum": 100 },
+        "coveragePercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "contractPassRate": { "type": "number", "minimum": 0, "maximum": 100 }
+      },
+      "additionalProperties": false
+    },
+    "deliveryReliability": {
+      "type": "object",
+      "required": ["smokePassRate", "rollbackCount", "meanRecoveryMinutes"],
+      "properties": {
+        "smokePassRate": { "type": "number", "minimum": 0, "maximum": 100 },
+        "rollbackCount": { "type": "number", "minimum": 0 },
+        "meanRecoveryMinutes": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

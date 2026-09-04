@@ -1,0 +1,10 @@
+{
+  "name": "st-mcu-selector",
+  "description": "ST MCU Selector web app for engineers to shortlist STM32 parts from the public MCU database.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "ST Key Visual landing page",
+    "Three MCU selection usage modes",
+    "Cloud Run static hosting"
+  ]
+}

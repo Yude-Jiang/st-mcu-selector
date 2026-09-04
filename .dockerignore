@@ -1,0 +1,14 @@
+.git
+.github
+.claude
+node_modules
+coverage
+reports
+docs
+scripts
+tests
+*.md
+.gitignore
+__pycache__
+.pytest_cache
+data
