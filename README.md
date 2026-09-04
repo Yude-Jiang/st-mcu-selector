@@ -2,7 +2,15 @@
 
 终端用户（硬件/软件工程师、产品主管工程师）在网页上完成 MCU 短名单：按需求推荐、竞品对照、查看订货号。计算逻辑与 MCP 相同，使用 ST 公开 `cube-finder-db`.
 
-## Quick Start
+## GitHub / Cloud Shell
+
+仓库（创建后）：https://github.com/Yude-Jiang/st-mcu-selector
+
+```bash
+git clone https://github.com/Yude-Jiang/st-mcu-selector.git
+cd st-mcu-selector
+ls Dockerfile server web
+```
 
 ```bash
 pip install -r server/requirements.txt
