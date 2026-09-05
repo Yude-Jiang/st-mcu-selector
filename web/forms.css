@@ -147,6 +147,86 @@
   line-height: 1.45;
 }
 
+.card-head a.st-link {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+.status-banner {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.status-banner.is-soon,
+.status-banner.is-nrnd,
+.status-banner.is-obsolete {
+  background: var(--st-navy);
+  color: var(--st-white);
+}
+
+.status-banner.is-active {
+  background: var(--st-gray-1);
+  color: var(--st-navy);
+}
+
+.status-banner.is-unknown,
+.status-banner.is-other {
+  background: var(--st-gray-1);
+  color: var(--st-slate);
+}
+
+.lead-copy {
+  padding: 12px 16px 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--st-navy);
+}
+
+.identity {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 16px;
+  margin: 0;
+  padding: 16px;
+  border-bottom: 1px solid var(--st-gray-2);
+}
+
+.identity dt {
+  font-size: 12px;
+  color: var(--st-slate);
+}
+
+.identity dd {
+  margin: 4px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--st-navy);
+}
+
+.spec-group h3 {
+  margin: 0;
+  padding: 12px 16px 0;
+  font-size: 13px;
+  color: var(--st-navy);
+}
+
+.spec-group .facts {
+  padding-top: 8px;
+}
+
+.cap-list {
+  margin: 0;
+  padding: 8px 16px 8px 36px;
+  color: var(--st-navy);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .meta {
   padding: 0 16px 16px;
   color: var(--st-slate);
@@ -157,6 +237,10 @@
   .form-grid,
   .lists {
     grid-template-columns: 1fr;
+  }
+
+  .identity {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .field.span-2,

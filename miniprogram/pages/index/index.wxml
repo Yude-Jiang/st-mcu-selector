@@ -163,12 +163,27 @@
       <view wx:if="{{inspectCard}}" class="card">
         <view class="card-head top">
           <text class="pn">{{inspectCard.partNumber}}</text>
-          <text class="score">{{inspectCard.status}}</text>
+          <text class="st-link" data-url="{{inspectCard.stUrl}}" bindtap="openStLink">复制 st.com 链接</text>
         </view>
-        <view class="facts">
-          <text wx:for="{{inspectCard.facts}}" wx:for-item="chip" wx:key="key" class="chip">{{chip.text}}</text>
+        <view class="status-banner {{inspectCard.status.kind}}">{{inspectCard.status.text}}</view>
+        <view wx:if="{{inspectCard.description}}" class="lead-copy">{{inspectCard.description}}</view>
+        <view class="identity">
+          <view wx:for="{{inspectCard.identity}}" wx:key="key" class="id-cell">
+            <text class="id-label">{{item.label}}</text>
+            <text class="id-value">{{item.value}}</text>
+          </view>
         </view>
-        <view class="meta">{{inspectCard.description}}</view>
+        <view wx:for="{{inspectCard.groups}}" wx:for-item="group" wx:key="title" class="spec-group">
+          <text class="group-title">{{group.title}}</text>
+          <view class="facts">
+            <text wx:for="{{group.items}}" wx:for-item="chip" wx:key="key" class="chip">{{chip.label}}: {{chip.value}}</text>
+          </view>
+        </view>
+        <view wx:for="{{inspectCard.lists}}" wx:for-item="block" wx:key="title" class="spec-group">
+          <text class="group-title">{{block.title}}</text>
+          <text wx:for="{{block.items}}" wx:for-item="line" wx:key="*this" class="cap-line">{{line}}</text>
+        </view>
+        <view class="meta">{{inspectCard.disclaimer}}</view>
       </view>
       <view wx:if="{{meta}}" class="meta">{{meta}}</view>
     </view>

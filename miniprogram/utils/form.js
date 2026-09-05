@@ -1,15 +1,4 @@
-const FACT_LABELS = {
-  core: "内核",
-  frequency_mhz: "MHz",
-  flash_kb: "Flash KB",
-  ram_kb: "RAM KB",
-  package: "封装",
-  pin_count: "引脚",
-  temperature_max_c: "Tmax",
-  fdcan: "FDCAN",
-  hrtim: "HRTIM",
-  motor_timers: "电机定时器",
-};
+const facts = require("./facts");
 
 function numberOrNull(value) {
   if (value === "" || value === null || value === undefined) return null;
@@ -40,10 +29,10 @@ function collectSpecs(fields) {
   return specs;
 }
 
-function factChips(facts) {
-  return Object.entries(facts || {}).map(([key, value]) => ({
-    key,
-    text: `${FACT_LABELS[key] || key}: ${value}`,
+function factChips(source) {
+  return facts.factEntries(source).map((item) => ({
+    key: item.key,
+    text: `${item.label}: ${item.value}`,
   }));
 }
 
@@ -61,4 +50,8 @@ function toCards(payload) {
   }));
 }
 
-module.exports = { numberOrNull, collectMust, collectSpecs, factChips, toCards };
+function toInspectCard(payload) {
+  return facts.inspectModel(payload);
+}
+
+module.exports = { numberOrNull, collectMust, collectSpecs, factChips, toCards, toInspectCard };

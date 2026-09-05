@@ -24,6 +24,10 @@ class SelectionApiTests(unittest.TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn("id=\"root\"", response.text)
+        self.assertIn("./facts.js", response.text)
+        facts = Path(ROOT / "web" / "facts.js").read_text(encoding="utf-8")
+        self.assertIn("即将供货", facts)
+        self.assertIn("st.com/content/st_com/en/search.html", facts)
         self.assertIn("/api/recommend", Path(ROOT / "web" / "app.js").read_text(encoding="utf-8"))
 
     def test_recommend_rejects_before_database_ready(self) -> None:

@@ -1,0 +1,69 @@
+.st-link {
+  font-size: 24rpx;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.status-banner {
+  padding: 16rpx 24rpx;
+  font-size: 24rpx;
+  font-weight: 700;
+  line-height: 1.4;
+  background: #eeeff1;
+  color: #03234b;
+}
+
+.status-banner.soon,
+.status-banner.nrnd,
+.status-banner.obsolete {
+  background: #03234b;
+  color: #ffffff;
+}
+
+.lead-copy {
+  padding: 20rpx 24rpx 0;
+  font-size: 26rpx;
+  line-height: 1.45;
+  color: #03234b;
+}
+
+.identity {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 20rpx 24rpx;
+  border-bottom: 2rpx solid #dbdee1;
+}
+
+.id-cell {
+  width: 50%;
+  padding: 8rpx 8rpx 12rpx 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.id-label {
+  font-size: 22rpx;
+  color: #425978;
+}
+
+.id-value {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #03234b;
+}
+
+.spec-group .group-title {
+  display: block;
+  padding: 20rpx 24rpx 0;
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #03234b;
+}
+
+.cap-line {
+  display: block;
+  padding: 4rpx 24rpx;
+  font-size: 24rpx;
+  color: #03234b;
+}

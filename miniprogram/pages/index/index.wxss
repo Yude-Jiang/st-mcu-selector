@@ -1,3 +1,5 @@
+@import "./inspect.wxss";
+
 .page {
   min-height: 100vh;
   background: #eeeff1;
@@ -213,10 +215,6 @@
 .pn {
   font-size: 30rpx;
   font-weight: 700;
-}
-
-.score {
-  font-size: 24rpx;
 }
 
 .facts {

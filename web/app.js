@@ -1,16 +1,3 @@
-const FACT_LABELS = {
-  core: "内核",
-  frequency_mhz: "MHz",
-  flash_kb: "Flash KB",
-  ram_kb: "RAM KB",
-  package: "封装",
-  pin_count: "引脚",
-  temperature_max_c: "Tmax",
-  fdcan: "FDCAN",
-  hrtim: "HRTIM",
-  motor_timers: "电机定时器",
-};
-
 function $(id) {
   return document.getElementById(id);
 }
@@ -59,9 +46,16 @@ async function parseResponse(response) {
   throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
 function factChips(facts) {
-  return Object.entries(facts || {})
-    .map(([key, value]) => `<span>${FACT_LABELS[key] || key}: ${value}</span>`)
+  return factEntries(facts)
+    .map((item) => `<span>${escapeHtml(item.label)}: ${escapeHtml(item.value)}</span>`)
     .join("");
 }
 
@@ -70,11 +64,32 @@ function listBlock(title, items) {
   return `<div><b>${title}</b><br>${items.map((item) => escapeHtml(item)).join("<br>")}</div>`;
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;");
+function identityBlock(rows) {
+  if (!rows.length) return "";
+  const cells = rows
+    .map((row) => `<div><dt>${escapeHtml(row.label)}</dt><dd>${escapeHtml(row.value)}</dd></div>`)
+    .join("");
+  return `<dl class="identity">${cells}</dl>`;
+}
+
+function specGroups(groups) {
+  return groups
+    .map((group) => {
+      const chips = group.items
+        .map((item) => `<span>${escapeHtml(item.label)}: ${escapeHtml(item.value)}</span>`)
+        .join("");
+      return `<section class="spec-group"><h3>${escapeHtml(group.title)}</h3><div class="facts">${chips}</div></section>`;
+    })
+    .join("");
+}
+
+function capabilityLists(lists) {
+  return lists
+    .map((entry) => {
+      const items = entry.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+      return `<section class="spec-group"><h3>${escapeHtml(entry.title)}</h3><ul class="cap-list">${items}</ul></section>`;
+    })
+    .join("");
 }
 
 function renderCards(payload) {
@@ -106,18 +121,22 @@ function renderCards(payload) {
 function renderInspect(payload) {
   if (!payload.found) {
     const suggestions = (payload.suggestions || []).map((item) => escapeHtml(item)).join("、");
-    $("results").innerHTML = `<p class="meta">未找到 ${escapeHtml(payload.part_number)}。${suggestions ? "相近订货号：" + suggestions : ""}</p>`;
+    $("results").innerHTML = `<p class='meta'>未找到 ${escapeHtml(payload.part_number)}。${suggestions ? "相近订货号：" + suggestions : ""}</p>`;
     return;
   }
-  const rpn = payload.rpn || {};
+  const view = inspectModel(payload);
   $("results").innerHTML = `
-    <article class="card">
+    <article class="card inspect-card">
       <div class="card-head">
-        <strong>${escapeHtml(payload.part_number || "")}</strong>
-        <span>${escapeHtml(rpn.marketingStatus || "")}</span>
+        <strong>${escapeHtml(view.partNumber)}</strong>
+        <a class="st-link" href="${escapeHtml(view.stUrl)}" target="_blank" rel="noopener noreferrer">在 st.com 查看</a>
       </div>
-      <div class="facts">${factChips(payload.normalized || {})}</div>
-      <p class="meta">${escapeHtml(rpn.description || payload.reference || "")}</p>
+      <p class="status-banner is-${escapeHtml(view.status.kind)}">${escapeHtml(view.status.text)}</p>
+      ${view.description ? `<p class="lead-copy">${escapeHtml(view.description)}</p>` : ""}
+      ${identityBlock(view.identity)}
+      ${specGroups(view.groups)}
+      ${capabilityLists(view.lists)}
+      <p class="meta">${escapeHtml(view.disclaimer)}</p>
     </article>`;
 }
 

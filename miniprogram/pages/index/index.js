@@ -216,19 +216,24 @@ Page({
       });
       return;
     }
-    const rpn = payload.rpn || {};
     this.setData({
       cards: [],
-      inspectCard: {
-        partNumber: payload.part_number || "",
-        status: rpn.marketingStatus || "",
-        facts: form.factChips(payload.normalized || {}),
-        description: rpn.description || payload.reference || "",
-      },
+      inspectCard: form.toInspectCard(payload),
       emptyText: "",
       meta: "",
       banner: "",
       bannerError: false,
+    });
+  },
+
+  openStLink(event) {
+    const url = event.currentTarget.dataset.url;
+    if (!url) return;
+    wx.setClipboardData({
+      data: url,
+      success: () => {
+        wx.showToast({ title: "已复制 st.com 链接", icon: "none" });
+      },
     });
   },
 });
