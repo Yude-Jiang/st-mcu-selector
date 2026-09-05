@@ -59,17 +59,13 @@ body {
   margin-bottom: 28px;
 }
 
-.brand-mark {
-  width: 56px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border: 2px solid var(--st-white);
-  color: var(--st-white);
-  font-family: Arial, Helvetica, sans-serif;
-  font-weight: 900;
-  font-size: 22px;
-  letter-spacing: 0.04em;
+.brand-logo {
+  display: block;
+  width: 94px;
+  height: 51px;
+  flex-shrink: 0;
+  /* Navy Key Visual: official mark is #03234B; invert to white on ST Dark Blue. */
+  filter: brightness(0) invert(1);
 }
 
 .brand-name {

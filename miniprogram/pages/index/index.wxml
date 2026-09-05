@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="hero-accent"></view>
     <view class="brand">
-      <view class="brand-mark">ST</view>
+      <image class="brand-logo" src="/st-logo.svg" mode="aspectFit" aria-label="STMicroelectronics"></image>
       <view class="brand-copy">
         <text class="brand-name">STMicroelectronics</text>
         <text class="db-pill">{{dbStatus}}</text>

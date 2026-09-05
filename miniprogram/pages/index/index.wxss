@@ -26,16 +26,10 @@
   margin-bottom: 28rpx;
 }
 
-.brand-mark {
-  width: 96rpx;
-  height: 60rpx;
-  border: 4rpx solid #ffffff;
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 32rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.brand-logo {
+  width: 160rpx;
+  height: 86rpx;
+  flex-shrink: 0;
 }
 
 .brand-copy {
