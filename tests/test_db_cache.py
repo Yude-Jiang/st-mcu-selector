@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sqlite3
 import sys
 import tempfile
@@ -92,7 +93,7 @@ class DbCacheTests(unittest.TestCase):
                     self.database, url=URL, mode="if_missing", store=self.store, bucket="test"
                 )
         install.assert_not_called()
-        self.assertEqual(result.source, "oss")
+        self.assertEqual(result.source, "cache")
         self.assertFalse(result.stale)
         self.assertTrue(self.database.is_file())
 
@@ -144,7 +145,7 @@ class DbCacheTests(unittest.TestCase):
                     self.database, url=URL, mode="if_missing", store=self.store, bucket="test"
                 )
         install.assert_not_called()
-        self.assertEqual(result.source, "oss")
+        self.assertEqual(result.source, "cache")
         self.assertTrue(result.stale)
 
     def test_st_refresh_failure_falls_back_to_previous_oss(self) -> None:
@@ -166,7 +167,7 @@ class DbCacheTests(unittest.TestCase):
                 result = db_cache.ensure(
                     self.database, url=URL, mode="if_missing", store=self.store, bucket="test"
                 )
-        self.assertEqual(result.source, "oss")
+        self.assertEqual(result.source, "cache")
         self.assertTrue(result.stale)
         pointer = self.store.read_json("cube-finder-db/current.json")
         assert pointer is not None
@@ -175,6 +176,13 @@ class DbCacheTests(unittest.TestCase):
     def test_fingerprint_prefers_etag(self) -> None:
         value = updater.fingerprint({"etag": '"abc"', "last_modified": "x", "content_length": 1})
         self.assertEqual(value, 'etag:"abc"')
+
+    def test_rejects_both_gcs_and_oss_env(self) -> None:
+        env = {"ST_MCU_GCS_BUCKET": "gcs-db", "ST_MCU_OSS_BUCKET": "oss-db"}
+        with patch.dict(os.environ, env, clear=False):
+            with self.assertRaises(ValueError) as ctx:
+                db_cache.ensure(self.database, url=URL, mode="if_missing")
+        self.assertIn("ST_MCU_GCS_BUCKET", str(ctx.exception))
 
 
 if __name__ == "__main__":

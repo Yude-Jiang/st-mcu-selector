@@ -56,5 +56,6 @@ erDiagram
 | 系统 | 用途 | 认证方式 | 限制 |
 |------|------|---------|------|
 | ChatGPT MCP | 实际选型（内部） | 公网 HTTPS `/mcp` | 终端用户入口不依赖它 |
-| 阿里云 SAE | 托管 API 与静态页 | 阿里云账号 / RAM | port 8080，需已备案自定义域名 |
-| 微信小程序 | 工程师表单查询 | AppID + request 合法域名 | 生产必须 HTTPS + ICP |
+| Cloud Run | 托管网页 API | GCP 项目权限 | port 8080；缓存 `ST_MCU_GCS_BUCKET`；`*.run.app` 不能给微信用 |
+| 阿里云 SAE | 托管 API 与静态页 | 阿里云账号 / RAM | port 8080；缓存 `ST_MCU_OSS_BUCKET`；需已备案自定义域名 |
+| 微信小程序 | 工程师表单查询 | AppID + request 合法域名 | 生产必须 HTTPS + ICP；只指向阿里云域名 |

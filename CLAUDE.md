@@ -114,10 +114,10 @@ scripts/{data-source}/transform-{source}.py
 ## 项目信息
 
 - **描述**: ST MCU Selector，给工程师在网页或微信小程序上完成 MCU 短名单
-- **部署**: 阿里云 SAE `st-mcu-selector`，默认 region `cn-hangzhou`（ACR + OSS + 已备案自定义域名）
+- **部署**: 两套并行——Cloud Run `st-mcu-selector`（GCS）与阿里云 SAE（OSS + 已备案域名）。文档分目录，见 `docs/cloud-run/` 与 `docs/aliyun/`
 - **技术栈**: 静态 HTML/CSS/JS + 微信小程序 + FastAPI
-- **线上 URL**: [SAE 自定义域名填写]
-- **GitHub**: [repo URL]
+- **线上 URL**: Cloud Run 与 SAE 自定义域名分别填写
+- **GitHub**: https://github.com/Yude-Jiang/st-mcu-selector
 
 ## 架构概览
 
@@ -125,20 +125,21 @@ scripts/{data-source}/transform-{source}.py
 
 ```
 web/: ST Key Visual 单页（推荐 / 竞品对照 / 查看订货号）
-miniprogram/: 微信小程序表单，wx.request 调同一套 API
+miniprogram/: 微信小程序表单，wx.request 调同一套 API（走阿里云备案域名）
 server/routes/: /api/recommend /api/compare /api/inspect
-scripts/aliyun-deploy.ps1: ACR 推镜像 + SAE 发布
+docs/cloud-run/: Cloud Shell / Cloud Run / GCS
+docs/aliyun/: SAE / ACR / OSS / 小程序合法域名
 ```
 
 ### 关键文件
 
 ```
 web/index.html — 页面结构与 TDK
-web/styles.css — ST 色板、Arial、message bar
 web/app.js — 网页三种问法
 miniprogram/config.js — apiBase（开发本机 / 生产阿里云域名）
-miniprogram/utils/api.js — 与 skill 对应的三个查询
 Dockerfile — FastAPI + 静态页，port 8080
+docs/cloud-run/README.md — GCS 桶与 gcloud run deploy
+docs/aliyun/README.md — OSS 桶、SAE、微信合法域名
 ```
 
 ## 项目特定代码规范
@@ -154,8 +155,8 @@ Dockerfile — FastAPI + 静态页，port 8080
 - 选型查询走本服务 API，不要求用户使用 ChatGPT，也不在小程序内跑 Claude skill
 - 不承诺引脚兼容、价格、交期
 - 竞品对照必须有规格来源说明
-- 生产 API 必须挂已 ICP 备案 HTTPS 域名，才能配进微信 request 合法域名
-- 本项目云端用阿里云 SAE / ACR / OSS，不用 Google Cloud Run / GCS
+- 微信生产 API 必须挂已 ICP 备案 HTTPS 域名；Cloud Run `*.run.app` 不能配进小程序
+- Cloud Run 用 `ST_MCU_GCS_BUCKET`，阿里云用 `ST_MCU_OSS_BUCKET`，不要同时设置
 
 ## 常用命令
 
@@ -166,8 +167,6 @@ python run.py
 # 测试
 python -m unittest tests.test_api tests.test_db_cache
 
-# 部署（PowerShell）
-$env:ACR_NAMESPACE="<namespace>"
-$env:ST_MCU_OSS_BUCKET="<bucket>"
-.\scripts\aliyun-deploy.ps1 production
+# Cloud Run — 见 docs/cloud-run/README.md
+# 阿里云 SAE — 见 docs/aliyun/README.md
 ```

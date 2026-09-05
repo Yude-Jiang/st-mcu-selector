@@ -67,3 +67,35 @@ class OssObjectStore:
 
     def upload_from(self, key: str, src: Path) -> None:
         self._bucket.put_object_from_file(key, str(src))
+
+
+class GcsObjectStore:
+    def __init__(self, bucket_name: str) -> None:
+        from google.cloud import storage
+
+        self._bucket = storage.Client().bucket(bucket_name)
+
+    def read_json(self, key: str) -> dict[str, Any] | None:
+        blob = self._bucket.blob(key)
+        if not blob.exists():
+            return None
+        return json.loads(blob.download_as_text())
+
+    def write_json(self, key: str, payload: dict[str, Any]) -> None:
+        self._bucket.blob(key).upload_from_string(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            content_type="application/json",
+        )
+
+    def exists(self, key: str) -> bool:
+        return bool(self._bucket.blob(key).exists())
+
+    def download_to(self, key: str, dest: Path) -> None:
+        blob = self._bucket.blob(key)
+        if not blob.exists():
+            raise FileNotFoundError(f"GCS object missing: {key}")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        blob.download_to_filename(str(dest))
+
+    def upload_from(self, key: str, src: Path) -> None:
+        self._bucket.blob(key).upload_from_filename(str(src))

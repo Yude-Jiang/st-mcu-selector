@@ -8,7 +8,7 @@ from urllib.error import URLError
 
 import engine_adapter
 import update_database as updater
-from object_store import ObjectStore, OssObjectStore
+from object_store import GcsObjectStore, ObjectStore, OssObjectStore
 
 DATABASE_NAME = updater.DATABASE_NAME
 POINTER_NAME = "current.json"
@@ -38,7 +38,20 @@ class CacheResult:
 
 
 def _prefix() -> str:
-    return os.environ.get("ST_MCU_OSS_PREFIX", "cube-finder-db").strip().strip("/")
+    for key in ("ST_MCU_GCS_PREFIX", "ST_MCU_OSS_PREFIX"):
+        value = os.environ.get(key, "").strip().strip("/")
+        if value:
+            return value
+    return "cube-finder-db"
+
+
+def _store_source(store: ObjectStore) -> str:
+    name = type(store).__name__
+    if name == "GcsObjectStore":
+        return "gcs"
+    if name == "OssObjectStore":
+        return "oss"
+    return "cache"
 
 
 def _pointer_key() -> str:
@@ -53,14 +66,14 @@ def _probe_remote(url: str) -> dict[str, Any] | None:
     try:
         return updater.metadata(url)
     except (URLError, TimeoutError, OSError, RuntimeError) as exc:
-        print(f"ST database HEAD failed; will use OSS/local fallback: {exc}", flush=True)
+        print(f"ST database HEAD failed; will use object-cache/local fallback: {exc}", flush=True)
         return None
 
 
 def _materialize(store: ObjectStore, pointer: dict[str, Any], database: Path) -> None:
     key = str(pointer.get("object") or "")
     if not key:
-        raise FileNotFoundError("OSS pointer is missing object key")
+        raise FileNotFoundError("Cache pointer is missing object key")
     store.download_to(key, database)
     engine_adapter.validate_database(database)
 
@@ -101,12 +114,12 @@ def _refresh_from_st(url: str, database: Path, store: ObjectStore | None) -> Cac
 def _from_pointer(store: ObjectStore, pointer: dict[str, Any], database: Path, *, stale: bool) -> CacheResult:
     _materialize(store, pointer, database)
     print(
-        f"Database loaded from OSS object={pointer.get('object')} stale={stale}",
+        f"Database loaded from {_store_source(store)} object={pointer.get('object')} stale={stale}",
         flush=True,
     )
     return CacheResult(
         database=database,
-        source="oss",
+        source=_store_source(store),
         fingerprint=pointer.get("fingerprint"),
         stale=stale,
         object_key=pointer.get("object"),
@@ -123,7 +136,7 @@ def _ensure_with_store(database: Path, url: str, mode: str, store: ObjectStore) 
         if database.is_file():
             engine_adapter.validate_database(database)
             return CacheResult(database, "local", None, False)
-        raise FileNotFoundError("ST_MCU_AUTO_UPDATE=never and OSS pointer is missing.")
+        raise FileNotFoundError("ST_MCU_AUTO_UPDATE=never and cache pointer is missing.")
 
     remote = _probe_remote(url)
     if remote and pointer:
@@ -149,7 +162,7 @@ def _ensure_with_store(database: Path, url: str, mode: str, store: ObjectStore) 
         engine_adapter.validate_database(database)
         return CacheResult(database, "local", None, True)
     raise FileNotFoundError(
-        "器件库不可用：ST 源无法访问，且 OSS 没有可用缓存。"
+        "器件库不可用：ST 源无法访问，且对象缓存没有可用副本。"
     )
 
 
@@ -187,9 +200,14 @@ def ensure(
 ) -> CacheResult:
     if mode not in {"never", "if_missing", "always"}:
         raise ValueError("ST_MCU_AUTO_UPDATE must be never, if_missing, or always")
-    resolved_bucket = (bucket if bucket is not None else os.environ.get("ST_MCU_OSS_BUCKET", "")).strip()
-    if resolved_bucket:
-        if store is None:
-            store = OssObjectStore(resolved_bucket)
+    gcs_bucket = os.environ.get("ST_MCU_GCS_BUCKET", "").strip()
+    oss_bucket = os.environ.get("ST_MCU_OSS_BUCKET", "").strip()
+    if store is not None:
         return _ensure_with_store(database, url, mode, store)
+    if gcs_bucket and oss_bucket:
+        raise ValueError("Set only one of ST_MCU_GCS_BUCKET or ST_MCU_OSS_BUCKET")
+    if gcs_bucket:
+        return _ensure_with_store(database, url, mode, GcsObjectStore(gcs_bucket))
+    if oss_bucket:
+        return _ensure_with_store(database, url, mode, OssObjectStore(oss_bucket))
     return _ensure_local(database, url, mode)
