@@ -27,7 +27,7 @@ function numberOrNull(value) {
 function collectMust(form) {
   const data = new FormData(form);
   const must = {};
-  const minFields = ["frequency_mhz", "flash_kb", "ram_kb", "temperature_max_c", "fdcan"];
+  const minFields = ["frequency_mhz", "flash_kb", "ram_kb", "temperature_max_c", "fdcan", "usb", "motor_timers", "hrtim"];
   minFields.forEach((name) => {
     const value = numberOrNull(data.get(name));
     if (value !== null) must[name] = { min: value };
@@ -98,19 +98,23 @@ function renderCards(payload) {
     $("results").innerHTML = "<p class='meta'>没有满足硬约束的候选。放宽 must 条件后再试。</p>";
     return;
   }
+  const mode = payload.mode === "competitor" ? "competitor" : "requirements";
   const cards = items.map((item, index) => {
-    const evidence = item.matches || item.comparisons || [];
+    const view = shortlistModel(item, index, mode);
     return `
       <article class="card">
         <div class="card-head">
-          <strong>${index + 1}. ${escapeHtml(item.part_number)}</strong>
-          <span>匹配度 ${escapeHtml(item.score)} · ${escapeHtml(item.status || "")}</span>
+          <strong>${view.rank}. ${escapeHtml(view.partNumber)}</strong>
+          <span>匹配度 ${escapeHtml(view.score)}</span>
         </div>
-        <div class="facts">${factChips(item.facts)}</div>
+        <p class="status-banner is-${escapeHtml(view.status.kind)}">${escapeHtml(view.status.text)}</p>
+        <div class="facts">${view.facts.map((chip) => `<span>${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}</span>`).join("")}</div>
         <div class="lists">
-          ${listBlock("依据", evidence)}
-          ${listBlock("风险 / 缺口", item.risks)}
+          ${listBlock(view.evidenceTitle, view.evidence)}
+          ${listBlock("匹配度说明", view.penalties)}
+          ${listBlock("风险 / 缺口", view.risks)}
         </div>
+        ${view.otherPackages.length ? `<p class="other-packages"><b>同系列还有这些封装</b><br>${view.otherPackages.map((line) => escapeHtml(line)).join("<br>")}</p>` : ""}
       </article>`;
   });
   const rejected = payload.rejected_by_hard_constraints;
@@ -172,7 +176,7 @@ $("form-competitor").addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
   const specs = {};
-  ["frequency_mhz", "flash_kb", "ram_kb", "pin_count", "fdcan"].forEach((name) => {
+  ["frequency_mhz", "flash_kb", "ram_kb", "pin_count", "fdcan", "usb", "motor_timers", "hrtim"].forEach((name) => {
     const value = numberOrNull(data.get(name));
     if (value !== null) specs[name] = value;
   });

@@ -74,6 +74,18 @@
           <input type="number" data-field="fdcan" value="{{rec.fdcan}}" bindinput="onRecInput" placeholder="例如 1"/>
         </view>
         <view class="field">
+          <text>USB 至少</text>
+          <input type="number" data-field="usb" value="{{rec.usb}}" bindinput="onRecInput" placeholder="例如 1"/>
+        </view>
+        <view class="field">
+          <text>电机定时器至少</text>
+          <input type="number" data-field="motor_timers" value="{{rec.motor_timers}}" bindinput="onRecInput" placeholder="例如 1"/>
+        </view>
+        <view class="field">
+          <text>HRTIM 至少</text>
+          <input type="number" data-field="hrtim" value="{{rec.hrtim}}" bindinput="onRecInput" placeholder="例如 1"/>
+        </view>
+        <view class="field">
           <text>缺字段策略</text>
           <picker range="{{policies}}" range-key="label" value="{{policyIndex}}" bindchange="onPolicyChange">
             <view class="picker">{{policies[policyIndex].label}}</view>
@@ -124,6 +136,18 @@
           <text>FDCAN</text>
           <input type="number" data-field="fdcan" value="{{cmp.fdcan}}" bindinput="onCmpInput"/>
         </view>
+        <view class="field">
+          <text>USB</text>
+          <input type="number" data-field="usb" value="{{cmp.usb}}" bindinput="onCmpInput"/>
+        </view>
+        <view class="field">
+          <text>电机定时器</text>
+          <input type="number" data-field="motor_timers" value="{{cmp.motor_timers}}" bindinput="onCmpInput"/>
+        </view>
+        <view class="field">
+          <text>HRTIM</text>
+          <input type="number" data-field="hrtim" value="{{cmp.hrtim}}" bindinput="onCmpInput"/>
+        </view>
       </view>
       <button class="submit" loading="{{loading}}" bindtap="onCompareSubmit">对照相近 STM32</button>
     </view>
@@ -142,21 +166,30 @@
     <view class="results">
       <view wx:if="{{emptyText}}" class="meta">{{emptyText}}</view>
       <view wx:for="{{cards}}" wx:key="partNumber" class="card">
-        <view class="card-head {{item.highlight ? 'top' : ''}}">
+        <view class="card-head {{item.rank === 1 ? 'top' : ''}}">
           <text class="pn">{{item.rank}}. {{item.partNumber}}</text>
-          <text class="score">匹配度 {{item.score}} · {{item.status}}</text>
+          <text class="score">匹配度 {{item.score}}</text>
         </view>
+        <view class="status-banner {{item.status.kind}}">{{item.status.text}}</view>
         <view class="facts">
-          <text wx:for="{{item.facts}}" wx:for-item="chip" wx:key="key" class="chip">{{chip.text}}</text>
+          <text wx:for="{{item.facts}}" wx:for-item="chip" wx:key="key" class="chip">{{chip.label}}: {{chip.value}}</text>
         </view>
         <view class="lists">
-          <view wx:if="{{item.matches.length}}">
-            <text class="list-title">依据</text>
-            <text wx:for="{{item.matches}}" wx:for-item="line" wx:key="*this" class="line">{{line}}</text>
+          <view wx:if="{{item.evidence.length}}">
+            <text class="list-title">{{item.evidenceTitle}}</text>
+            <text wx:for="{{item.evidence}}" wx:for-item="line" wx:key="*this" class="line">{{line}}</text>
+          </view>
+          <view wx:if="{{item.penalties.length}}">
+            <text class="list-title">匹配度说明</text>
+            <text wx:for="{{item.penalties}}" wx:for-item="line" wx:key="*this" class="line">{{line}}</text>
           </view>
           <view wx:if="{{item.risks.length}}">
             <text class="list-title">风险 / 缺口</text>
             <text wx:for="{{item.risks}}" wx:for-item="line" wx:key="*this" class="line">{{line}}</text>
+          </view>
+          <view wx:if="{{item.otherPackages.length}}">
+            <text class="list-title">同系列还有这些封装</text>
+            <text wx:for="{{item.otherPackages}}" wx:for-item="line" wx:key="*this" class="line">{{line}}</text>
           </view>
         </view>
       </view>

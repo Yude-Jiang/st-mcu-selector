@@ -25,9 +25,14 @@ class SelectionApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("id=\"root\"", response.text)
         self.assertIn("./facts.js", response.text)
+        self.assertIn("name=\"motor_timers\"", response.text)
+        self.assertIn("name=\"hrtim\"", response.text)
+        self.assertIn("name=\"usb\"", response.text)
         facts = Path(ROOT / "web" / "facts.js").read_text(encoding="utf-8")
         self.assertIn("即将供货", facts)
         self.assertIn("st.com/content/st_com/en/search.html", facts)
+        self.assertIn("与竞品对照", facts)
+        self.assertIn("SHORTLIST_KEYS", facts)
         self.assertIn("/api/recommend", Path(ROOT / "web" / "app.js").read_text(encoding="utf-8"))
 
     def test_recommend_rejects_before_database_ready(self) -> None:

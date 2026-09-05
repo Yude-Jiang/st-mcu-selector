@@ -32,6 +32,10 @@ const FACT_LABELS = {
 };
 
 const IDENTITY_KEYS = ["core", "frequency_mhz", "flash_kb", "ram_kb", "package", "pin_count"];
+const SHORTLIST_KEYS = [
+  "core", "frequency_mhz", "flash_kb", "ram_kb", "package", "pin_count",
+  "temperature_max_c", "fdcan", "usb", "motor_timers", "hrtim",
+];
 
 const SPEC_GROUPS = [
   { title: "工作条件", keys: ["temperature_min_c", "temperature_max_c", "voltage_min_v", "voltage_max_v"] },
@@ -129,4 +133,19 @@ function inspectModel(payload) {
   };
 }
 
-module.exports = { factEntries, inspectModel };
+function shortlistModel(item, index, mode) {
+  return {
+    rank: index + 1,
+    partNumber: item.part_number,
+    score: item.score,
+    status: lifecycleStatus(item.status),
+    facts: factEntries(item.facts, SHORTLIST_KEYS),
+    evidenceTitle: mode === "competitor" ? "与竞品对照" : "依据",
+    evidence: item.matches || item.comparisons || [],
+    penalties: item.penalties || [],
+    otherPackages: item.other_packages || [],
+    risks: item.risks || [],
+  };
+}
+
+module.exports = { factEntries, inspectModel, shortlistModel };

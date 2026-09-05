@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable
 
+from shortlist import application_label, diversify_by_series, field_label, format_points
+
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -303,23 +305,24 @@ def text_matches(value: Any, choices: list[Any]) -> bool:
 
 def evaluate_constraint(field: str, value: Any, raw_constraint: Any) -> tuple[str, str]:
     constraint = normalize_constraint(field, raw_constraint)
+    label = field_label(field)
     if value is None or value == "":
-        return "unknown", f"{field}: 数据库无值"
+        return "unknown", f"{label}：数据库无值"
     if field in NUMERIC_FIELDS:
         number = numeric(value, allow_negative=field in {"temperature_min_c"})
         if number is None:
-            return "unknown", f"{field}: 无法解析 {value!r}"
+            return "unknown", f"{label}：无法解析 {value!r}"
         if "min" in constraint and number < float(constraint["min"]):
-            return "fail", f"{field}={number:g} < {constraint['min']}"
+            return "fail", f"{label}={number:g} < {constraint['min']}"
         if "max" in constraint and number > float(constraint["max"]):
-            return "fail", f"{field}={number:g} > {constraint['max']}"
-        return "pass", f"{field}={number:g}"
+            return "fail", f"{label}={number:g} > {constraint['max']}"
+        return "pass", f"{label}={number:g}"
     choices = constraint.get("any_of") or constraint.get("contains")
     if choices is not None and not text_matches(value, list(choices)):
-        return "fail", f"{field}={value!r} 不匹配 {choices}"
+        return "fail", f"{label}={value!r} 不匹配 {choices}"
     if "equals" in constraint and str(value).lower() != str(constraint["equals"]).lower():
-        return "fail", f"{field}={value!r} != {constraint['equals']!r}"
-    return "pass", f"{field}={value}"
+        return "fail", f"{label}={value!r} != {constraint['equals']!r}"
+    return "pass", f"{label}={value}"
 
 
 def overqualification_penalty(field: str, value: Any, raw_constraint: Any) -> float:
@@ -359,17 +362,21 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
     profile = APPLICATION_PROFILES.get(str(request_data.get("application", "")).lower(), {})
     ranked: list[dict[str, Any]] = []
     rejected = 0
+    app_name = application_label(str(request_data.get("application") or ""))
 
     for candidate in candidates:
         fields = candidate["fields"]
         score = 100.0
         matches: list[str] = []
         risks: list[str] = []
+        penalties: list[str] = []
         failures: list[str] = []
         status_lower = candidate["status"].lower()
         if "active" not in status_lower:
-            score -= 8.0 if "coming soon" in status_lower else 4.0
-            risks.append(f"生命周期状态需确认: {candidate['status']}")
+            delta = 8.0 if "coming soon" in status_lower else 4.0
+            score -= delta
+            risks.append(f"生命周期状态需确认：{candidate['status']}")
+            penalties.append(f"库内状态不是量产，匹配度减 {format_points(delta)}")
         for field, constraint in must.items():
             status, detail = evaluate_constraint(field, fields.get(field), constraint)
             if status == "fail":
@@ -380,9 +387,13 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
                 else:
                     risks.append(detail)
                     score -= 12.0
+                    penalties.append(f"{detail}，匹配度减 12")
             else:
                 matches.append(detail)
-                score -= overqualification_penalty(field, fields.get(field), constraint)
+                extra = overqualification_penalty(field, fields.get(field), constraint)
+                if extra:
+                    score -= extra
+                    penalties.append(f"{field_label(field)}明显高于需求，匹配度减 {format_points(extra)}")
         if failures:
             rejected += 1
             continue
@@ -391,18 +402,26 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
             status, detail = evaluate_constraint(field, fields.get(field), constraint)
             weight = float(DEFAULT_WEIGHTS.get(field, 1.0))
             if status == "pass":
-                matches.append(f"偏好满足: {detail}")
+                matches.append(f"偏好满足：{detail}")
             elif status == "unknown":
-                risks.append(f"偏好待确认: {detail}")
-                score -= 1.5 * weight
+                delta = 1.5 * weight
+                risks.append(f"偏好待确认：{detail}")
+                score -= delta
+                penalties.append(f"偏好待确认：{detail}，匹配度减 {format_points(delta)}")
             else:
-                score -= 4.0 * weight
+                delta = 4.0 * weight
+                score -= delta
+                penalties.append(f"偏好未满足：{detail}，匹配度减 {format_points(delta)}")
 
         for field, weight in profile.items():
             value = fields.get(field)
             present = numeric(value) if field in NUMERIC_FIELDS else value
             if present is None or present == 0 or present == "":
-                score -= 2.0 * weight
+                delta = 2.0 * weight
+                score -= delta
+                penalties.append(
+                    f"应用「{app_name}」库中未见{field_label(field)}，匹配度减 {format_points(delta)}"
+                )
 
         ranked.append({
             **{key: candidate[key] for key in ("part_number", "reference", "rpn", "status", "description")},
@@ -410,18 +429,12 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
             "facts": compact_facts(fields),
             "matches": matches,
             "risks": risks,
+            "penalties": penalties,
         })
 
     ranked.sort(key=lambda item: (-item["score"], item["part_number"]))
-    diversified: list[dict[str, Any]] = []
-    seen_rpn: set[str] = set()
-    for item in ranked:
-        group = item["rpn"] or item["reference"]
-        if group in seen_rpn:
-            continue
-        seen_rpn.add(group)
-        diversified.append(item)
     limit = max(1, min(int(request_data.get("limit", 3)), 20))
+    diversified = diversify_by_series(ranked, limit)
     return {
         "mode": "requirements",
         "database": str(database),
@@ -435,18 +448,19 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
 
 
 def similarity(field: str, candidate: Any, target: Any) -> tuple[float, str]:
+    label = field_label(field)
     if candidate is None:
-        return 0.0, f"{field}: ST 数据缺失"
+        return 0.0, f"{label}：ST 数据缺失"
     if field in NUMERIC_FIELDS:
         actual = numeric(candidate, allow_negative=field == "temperature_min_c")
         wanted = numeric(target, allow_negative=field == "temperature_min_c")
         if actual is None or wanted is None:
-            return 0.0, f"{field}: 无法比较"
+            return 0.0, f"{label}：无法比较"
         scale = max(abs(wanted), 1.0)
         closeness = max(0.0, 1.0 - abs(actual - wanted) / scale)
-        return closeness, f"{field}: ST={actual:g}, competitor={wanted:g}"
+        return closeness, f"{label}：ST={actual:g}，竞品={wanted:g}"
     matched = text_matches(candidate, target if isinstance(target, list) else [target])
-    return (1.0 if matched else 0.0), f"{field}: ST={candidate}, competitor={target}"
+    return (1.0 if matched else 0.0), f"{label}：ST={candidate}，竞品={target}"
 
 
 def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
@@ -465,6 +479,7 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
         failures: list[str] = []
         comparisons: list[str] = []
         risks: list[str] = []
+        penalties: list[str] = []
         weighted_score = 0.0
         total_weight = 0.0
         for field, target in specs.items():
@@ -473,7 +488,7 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
             closeness, detail = similarity(field, value, target)
             if field in essential:
                 if value is None:
-                    failures.append(f"{field}: ST 数据缺失")
+                    failures.append(f"{field_label(field)}：ST 数据缺失")
                 elif field in NUMERIC_FIELDS and numeric(value, field == "temperature_min_c") is not None:
                     actual = numeric(value, field == "temperature_min_c")
                     wanted = numeric(target, field == "temperature_min_c")
@@ -495,25 +510,22 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
         score = 100.0 * weighted_score / total_weight if total_weight else 0.0
         status_lower = candidate["status"].lower()
         if "active" not in status_lower:
-            score *= 0.88 if "coming soon" in status_lower else 0.95
-            risks.append(f"生命周期状态需确认: {candidate['status']}")
+            factor = 0.88 if "coming soon" in status_lower else 0.95
+            score *= factor
+            risks.append(f"生命周期状态需确认：{candidate['status']}")
+            penalties.append(f"库内状态不是量产，相似度按 {int(factor * 100)}% 计")
         ranked.append({
             **{key: candidate[key] for key in ("part_number", "reference", "rpn", "status", "description")},
             "score": round(score, 1),
             "facts": compact_facts(fields),
             "comparisons": comparisons,
             "risks": risks,
+            "penalties": penalties,
         })
 
     ranked.sort(key=lambda item: (-item["score"], item["part_number"]))
-    diversified: list[dict[str, Any]] = []
-    seen_rpn: set[str] = set()
-    for item in ranked:
-        if item["rpn"] in seen_rpn:
-            continue
-        seen_rpn.add(item["rpn"])
-        diversified.append(item)
     limit = max(1, min(int(competitor.get("limit", 3)), 20))
+    diversified = diversify_by_series(ranked, limit)
     return {
         "mode": "competitor",
         "database": str(database),

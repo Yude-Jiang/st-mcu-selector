@@ -140,11 +140,19 @@
 
 .lists {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
   padding: 12px 16px 16px;
   font-size: 13px;
   line-height: 1.45;
+}
+
+.other-packages {
+  margin: 0;
+  padding: 0 16px 16px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--st-navy);
 }
 
 .card-head a.st-link {

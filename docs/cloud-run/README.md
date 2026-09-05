@@ -34,10 +34,34 @@ gcloud storage buckets add-iam-policy-binding gs://st-china-ai-force-mcu-db \
 
 未设 `ST_MCU_GCS_BUCKET` 时，启动仍直接从 `sw-center.st.com` 拉 zip。
 
-## 部署
+## 现网
+
+服务名 `st-mcu-selector`。当前 URL：https://st-mcu-selector-460989091461.asia-east1.run.app/
 
 ```bash
 gcloud run deploy st-mcu-selector \
+  --source . \
+  --project st-china-ai-force \
+  --region asia-east1 \
+  --port 8080 \
+  --allow-unauthenticated \
+  --memory 2Gi \
+  --timeout 300 \
+  --max-instances 1 \
+  --set-env-vars ST_MCU_TRUST_PROXY=true,FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db
+```
+
+不要用这条命令发还未验收的改版，否则会换掉上面这个 URL 的内容。
+
+## 预览（新 URL）
+
+服务名必须是 **`st-mcu-selector-preview`**，不是 `st-mcu-selector`。Cloud Run 会另给一条 `https://st-mcu-selector-preview-….asia-east1.run.app/`。现网地址不变。两个服务可共用同一 GCS 桶。
+
+```bash
+cd st-mcu-selector
+git pull
+
+gcloud run deploy st-mcu-selector-preview \
   --source . \
   --project st-china-ai-force \
   --region asia-east1 \

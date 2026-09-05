@@ -8,7 +8,7 @@ function numberOrNull(value) {
 
 function collectMust(fields) {
   const must = {};
-  ["frequency_mhz", "flash_kb", "ram_kb", "temperature_max_c", "fdcan"].forEach((name) => {
+  ["frequency_mhz", "flash_kb", "ram_kb", "temperature_max_c", "fdcan", "usb", "motor_timers", "hrtim"].forEach((name) => {
     const value = numberOrNull(fields[name]);
     if (value !== null) must[name] = { min: value };
   });
@@ -20,7 +20,7 @@ function collectMust(fields) {
 
 function collectSpecs(fields) {
   const specs = {};
-  ["frequency_mhz", "flash_kb", "ram_kb", "pin_count", "fdcan"].forEach((name) => {
+  ["frequency_mhz", "flash_kb", "ram_kb", "pin_count", "fdcan", "usb", "motor_timers", "hrtim"].forEach((name) => {
     const value = numberOrNull(fields[name]);
     if (value !== null) specs[name] = value;
   });
@@ -37,17 +37,8 @@ function factChips(source) {
 }
 
 function toCards(payload) {
-  const items = payload.recommendations || [];
-  return items.map((item, index) => ({
-    partNumber: item.part_number,
-    score: item.score,
-    status: item.status || "",
-    rank: index + 1,
-    highlight: index === 0,
-    facts: factChips(item.facts),
-    matches: item.matches || item.comparisons || [],
-    risks: item.risks || [],
-  }));
+  const mode = payload.mode === "competitor" ? "competitor" : "requirements";
+  return (payload.recommendations || []).map((item, index) => facts.shortlistModel(item, index, mode));
 }
 
 function toInspectCard(payload) {
