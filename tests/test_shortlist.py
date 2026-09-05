@@ -10,7 +10,7 @@ ENGINE = ROOT / "server" / "engine"
 sys.path.insert(0, str(ENGINE))
 os.chdir(ROOT)
 
-from shortlist import diversify_by_series, series_group  # noqa: E402
+from shortlist import diversify_by_rpn, diversify_by_series, pick_shortlist, series_group  # noqa: E402
 import mcu_recommender as engine  # noqa: E402
 
 
@@ -39,6 +39,37 @@ class ShortlistTests(unittest.TestCase):
         self.assertIn("WLCSP25", extras)
         self.assertIn("UFQFPN32", extras)
         self.assertEqual(picked[1]["other_packages"], [])
+
+    def test_rpn_diversify_keeps_same_series_packages(self) -> None:
+        ranked = [
+            _item("STM32H503CBT6", "STM32H503CB", "LQFP48", 48),
+            _item("STM32H503EBY6TR", "STM32H503EB", "WLCSP25", 25),
+            _item("STM32G474RET3", "STM32G474RE", "LQFP64", 64),
+        ]
+        picked = diversify_by_rpn(ranked, 3)
+        self.assertEqual(
+            [item["part_number"] for item in picked],
+            ["STM32H503CBT6", "STM32H503EBY6TR", "STM32G474RET3"],
+        )
+
+    def test_pick_shortlist_follows_env_flag(self) -> None:
+        ranked = [
+            _item("STM32H503CBT6", "STM32H503CB", "LQFP48", 48),
+            _item("STM32H503EBY6TR", "STM32H503EB", "WLCSP25", 25),
+            _item("STM32G474RET3", "STM32G474RE", "LQFP64", 64),
+        ]
+        os.environ.pop("ST_MCU_SERIES_DIVERSIFY", None)
+        rpn_picked = pick_shortlist([dict(item) for item in ranked], 3)
+        self.assertEqual(len(rpn_picked), 3)
+        os.environ["ST_MCU_SERIES_DIVERSIFY"] = "true"
+        try:
+            series_picked = pick_shortlist([dict(item) for item in ranked], 3)
+            self.assertEqual(
+                [item["part_number"] for item in series_picked],
+                ["STM32H503CBT6", "STM32G474RET3"],
+            )
+        finally:
+            os.environ.pop("ST_MCU_SERIES_DIVERSIFY", None)
 
     def test_constraint_copy_uses_chinese_labels(self) -> None:
         status, detail = engine.evaluate_constraint("frequency_mhz", 250, {"min": 170})

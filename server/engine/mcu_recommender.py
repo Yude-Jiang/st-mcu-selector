@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable
 
-from shortlist import application_label, diversify_by_series, field_label, format_points
+from shortlist import application_label, field_label, format_points, pick_shortlist
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -434,7 +434,7 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
 
     ranked.sort(key=lambda item: (-item["score"], item["part_number"]))
     limit = max(1, min(int(request_data.get("limit", 3)), 20))
-    diversified = diversify_by_series(ranked, limit)
+    diversified = pick_shortlist(ranked, limit)
     return {
         "mode": "requirements",
         "database": str(database),
@@ -525,7 +525,7 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
 
     ranked.sort(key=lambda item: (-item["score"], item["part_number"]))
     limit = max(1, min(int(competitor.get("limit", 3)), 20))
-    diversified = diversify_by_series(ranked, limit)
+    diversified = pick_shortlist(ranked, limit)
     return {
         "mode": "competitor",
         "database": str(database),

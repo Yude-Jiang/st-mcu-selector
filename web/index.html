@@ -20,40 +20,34 @@
       <div class="hero-inner">
         <div class="brand">
           <img class="brand-logo" src="./st-logo.svg" width="94" height="51" alt="STMicroelectronics">
-          <p class="brand-name">STMicroelectronics</p>
+          <h1 class="title-bar">MCU Selector</h1>
           <p class="db-pill" id="db-status">器件库加载中</p>
         </div>
-        <div class="yellow-bar">
-          <h1>ST MCU Selector</h1>
-        </div>
-        <p class="hero-lead">填写必须满足的规格，或对照已核实的竞品参数，得到最多三个订货号。这是短名单，不是设计签核。</p>
       </div>
       <p class="message-bar">
-        <span>数据库匹配只给候选；封装引脚、外设并发、认证、价格和供货仍须核对当前 datasheet。</span>
+        <span>数据库匹配只给候选；最多给出三个订货号。这是短名单，不是设计签核。封装引脚、外设并发、认证、价格和供货仍须核对当前 datasheet。</span>
       </p>
     </header>
 
     <main class="page">
-      <h2>选择任务</h2>
-      <div class="modes" role="tablist">
-        <button class="mode is-active" type="button" data-mode="requirements">
-          <div class="mode-head">按需求推荐</div>
-          <div class="mode-body">频率、Flash、封装、温度和接口写成必须条件，适合电机控制和工业规格。</div>
+      <div class="modes" role="tablist" aria-label="选择任务">
+        <button class="mode is-active" type="button" role="tab" id="tab-requirements" data-mode="requirements" aria-selected="true" aria-controls="form-requirements" tabindex="0">
+          <span class="mode-head">按需求推荐</span>
+          <span class="mode-body">按必须规格拿三颗候选</span>
         </button>
-        <button class="mode" type="button" data-mode="competitor">
-          <div class="mode-head">竞品对照</div>
-          <div class="mode-body">必须提供官方 datasheet 或已核实规格。不会根据竞品料号猜测参数。</div>
+        <button class="mode" type="button" role="tab" id="tab-competitor" data-mode="competitor" aria-selected="false" aria-controls="form-competitor" tabindex="-1">
+          <span class="mode-head">竞品对照</span>
+          <span class="mode-body">用已核实规格对照 STM32</span>
         </button>
-        <button class="mode" type="button" data-mode="inspect">
-          <div class="mode-head">查看订货号</div>
-          <div class="mode-body">输入 STM32 订货号，查看库中的封装、温度和接口字段。</div>
+        <button class="mode" type="button" role="tab" id="tab-inspect" data-mode="inspect" aria-selected="false" aria-controls="form-inspect" tabindex="-1">
+          <span class="mode-head">查看订货号</span>
+          <span class="mode-body">核对其在库里是什么</span>
         </button>
       </div>
 
       <p class="banner" id="banner"></p>
 
-      <form id="form-requirements" class="form-panel is-open">
-        <h3>按需求推荐</h3>
+      <form id="form-requirements" class="form-panel is-open" role="tabpanel" aria-labelledby="tab-requirements">
         <div class="form-grid">
           <label class="field">应用
             <select name="application">
@@ -111,8 +105,7 @@
         <div class="actions"><button type="submit">给出短名单</button></div>
       </form>
 
-      <form id="form-competitor" class="form-panel">
-        <h3>竞品对照</h3>
+      <form id="form-competitor" class="form-panel" role="tabpanel" aria-labelledby="tab-competitor" hidden>
         <div class="form-grid">
           <label class="field">厂商
             <input name="manufacturer" required placeholder="例如 NXP">
@@ -154,8 +147,7 @@
         <div class="actions"><button type="submit">对照相近 STM32</button></div>
       </form>
 
-      <form id="form-inspect" class="form-panel">
-        <h3>查看订货号</h3>
+      <form id="form-inspect" class="form-panel" role="tabpanel" aria-labelledby="tab-inspect" hidden>
         <div class="form-grid">
           <label class="field span-2">STM32 订货号
             <input name="part_number" required minlength="3" placeholder="例如 STM32G474RET3">
@@ -169,6 +161,7 @@
 
     <footer>
       <span>ST MCU Selector · 公开 MCU 数据库短名单</span>
+      <span>created by: helon.chen@st.com; yude.jiang@st.com · <time id="footer-date"></time></span>
       <span>STMicroelectronics. All trademarks are the property of their respective owners.</span>
     </footer>
   </div>

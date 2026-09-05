@@ -11,31 +11,27 @@
     <view class="yellow-bar">
       <text class="h1">ST MCU Selector</text>
     </view>
-    <text class="lead">填写必须满足的规格，或对照已核实的竞品参数，得到最多三个订货号。这是短名单，不是设计签核。</text>
+    <text class="lead">最多三个订货号。这是短名单，不是设计签核。</text>
   </view>
   <view class="message-bar">数据库匹配只给候选；封装引脚、外设并发、认证、价格和供货仍须核对当前 datasheet。</view>
 
   <view class="body">
-    <text class="section-title">选择任务</text>
     <view class="modes">
-      <view class="mode {{mode === 'requirements' ? 'is-active' : ''}}" data-mode="requirements" bindtap="switchMode">
-        <text class="mode-head">按需求推荐</text>
-        <text class="mode-body">频率、Flash、封装、温度和接口写成必须条件。</text>
+      <view class="mode {{mode === 'requirements' ? 'is-active' : ''}}" data-mode="requirements" hover-class="none" bindtap="switchMode">
+        <text class="mode-head">按需求</text>
       </view>
-      <view class="mode {{mode === 'competitor' ? 'is-active' : ''}}" data-mode="competitor" bindtap="switchMode">
+      <view class="mode {{mode === 'competitor' ? 'is-active' : ''}}" data-mode="competitor" hover-class="none" bindtap="switchMode">
         <text class="mode-head">竞品对照</text>
-        <text class="mode-body">必须提供官方 datasheet 或已核实规格。</text>
       </view>
-      <view class="mode {{mode === 'inspect' ? 'is-active' : ''}}" data-mode="inspect" bindtap="switchMode">
-        <text class="mode-head">查看订货号</text>
-        <text class="mode-body">输入 STM32 订货号，查看库中的封装与接口。</text>
+      <view class="mode {{mode === 'inspect' ? 'is-active' : ''}}" data-mode="inspect" hover-class="none" bindtap="switchMode">
+        <text class="mode-head">订货号</text>
       </view>
     </view>
+    <text class="mode-hint">{{modeHint}}</text>
 
     <view wx:if="{{banner}}" class="banner {{bannerError ? 'error' : ''}}">{{banner}}</view>
 
     <view wx:if="{{mode === 'requirements'}}" class="panel">
-      <view class="panel-head">按需求推荐</view>
       <view class="grid">
         <view class="field">
           <text>应用</text>
@@ -92,11 +88,12 @@
           </picker>
         </view>
       </view>
-      <button class="submit" loading="{{loading}}" bindtap="onRecommendSubmit">给出短名单</button>
+      <view class="submit-bar">
+        <button class="submit" hover-class="none" loading="{{loading}}" bindtap="onRecommendSubmit">给出短名单</button>
+      </view>
     </view>
 
     <view wx:if="{{mode === 'competitor'}}" class="panel">
-      <view class="panel-head">竞品对照</view>
       <view class="grid">
         <view class="field">
           <text>厂商</text>
@@ -149,18 +146,21 @@
           <input type="number" data-field="hrtim" value="{{cmp.hrtim}}" bindinput="onCmpInput"/>
         </view>
       </view>
-      <button class="submit" loading="{{loading}}" bindtap="onCompareSubmit">对照相近 STM32</button>
+      <view class="submit-bar">
+        <button class="submit" hover-class="none" loading="{{loading}}" bindtap="onCompareSubmit">对照相近 STM32</button>
+      </view>
     </view>
 
     <view wx:if="{{mode === 'inspect'}}" class="panel">
-      <view class="panel-head">查看订货号</view>
       <view class="grid">
         <view class="field span">
           <text>STM32 订货号</text>
-          <input value="{{inspectPart}}" bindinput="onInspectInput" placeholder="例如 STM32G474RET3"/>
+          <input value="{{inspectPart}}" confirm-type="search" bindinput="onInspectInput" bindconfirm="onInspectSubmit" placeholder="例如 STM32G474RET3"/>
         </view>
       </view>
-      <button class="submit" loading="{{loading}}" bindtap="onInspectSubmit">查看这颗料</button>
+      <view class="submit-bar">
+        <button class="submit" hover-class="none" loading="{{loading}}" bindtap="onInspectSubmit">查看这颗料</button>
+      </view>
     </view>
 
     <view class="results">

@@ -4,11 +4,26 @@ function $(id) {
 
 function showMode(mode) {
   document.querySelectorAll(".mode").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.mode === mode);
+    const selected = button.dataset.mode === mode;
+    button.classList.toggle("is-active", selected);
+    button.setAttribute("aria-selected", selected ? "true" : "false");
+    button.tabIndex = selected ? 0 : -1;
   });
-  $("form-requirements").classList.toggle("is-open", mode === "requirements");
-  $("form-competitor").classList.toggle("is-open", mode === "competitor");
-  $("form-inspect").classList.toggle("is-open", mode === "inspect");
+  [
+    ["requirements", "form-requirements"],
+    ["competitor", "form-competitor"],
+    ["inspect", "form-inspect"],
+  ].forEach(([key, id]) => {
+    const panel = $(id);
+    const open = key === mode;
+    panel.classList.toggle("is-open", open);
+    panel.hidden = !open;
+  });
+}
+
+function clearResults() {
+  $("results").innerHTML = "";
+  setBanner("", false);
 }
 
 function setBanner(message, isError) {
@@ -216,12 +231,26 @@ $("form-inspect").addEventListener("submit", async (event) => {
   }
 });
 
-document.querySelectorAll(".mode").forEach((button) => {
+const tabs = document.querySelectorAll(".mode");
+tabs.forEach((button) => {
   button.addEventListener("click", () => {
     showMode(button.dataset.mode);
-    $("results").innerHTML = "";
-    setBanner("", false);
+    clearResults();
   });
+});
+document.querySelector(".modes").addEventListener("keydown", (event) => {
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const list = [...tabs];
+  const current = list.findIndex((tab) => tab.classList.contains("is-active"));
+  let next = current;
+  if (event.key === "ArrowRight") next = (current + 1) % list.length;
+  if (event.key === "ArrowLeft") next = (current - 1 + list.length) % list.length;
+  if (event.key === "Home") next = 0;
+  if (event.key === "End") next = list.length - 1;
+  event.preventDefault();
+  showMode(list[next].dataset.mode);
+  list[next].focus();
+  clearResults();
 });
 
 async function refreshHealth() {
@@ -241,3 +270,8 @@ async function refreshHealth() {
 
 refreshHealth();
 setInterval(refreshHealth, 8000);
+
+const footerDate = $("footer-date");
+if (footerDate) {
+  footerDate.textContent = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai" }).format(new Date());
+}

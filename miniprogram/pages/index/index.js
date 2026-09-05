@@ -18,6 +18,12 @@ const PACKAGES = [
   { id: "WLCSP", label: "WLCSP" },
 ];
 
+const MODE_HINTS = {
+  requirements: "填必须规格，最多三颗候选",
+  competitor: "填已核实规格，对照 STM32",
+  inspect: "输入订货号，核对其在库里是什么",
+};
+
 const POLICIES = [
   { id: "allow_risk", label: "保留并标出风险" },
   { id: "exclude", label: "库中无证据则排除" },
@@ -26,6 +32,7 @@ const POLICIES = [
 Page({
   data: {
     mode: "requirements",
+    modeHint: MODE_HINTS.requirements,
     dbStatus: "器件库加载中",
     banner: "",
     bannerError: false,
@@ -73,8 +80,10 @@ Page({
   },
 
   switchMode(event) {
+    const mode = event.currentTarget.dataset.mode;
     this.setData({
-      mode: event.currentTarget.dataset.mode,
+      mode,
+      modeHint: MODE_HINTS[mode],
       cards: [],
       inspectCard: null,
       emptyText: "",

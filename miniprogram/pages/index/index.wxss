@@ -9,7 +9,7 @@
   position: relative;
   background: #03234b;
   color: #ffffff;
-  padding: 36rpx 32rpx 40rpx;
+  padding: 24rpx 32rpx 28rpx;
 }
 
 .hero-accent {
@@ -25,7 +25,7 @@
   display: flex;
   align-items: center;
   gap: 20rpx;
-  margin-bottom: 28rpx;
+  margin-bottom: 16rpx;
 }
 
 .brand-logo {
@@ -55,8 +55,8 @@
 .yellow-bar {
   background: #ffd200;
   color: #03234b;
-  padding: 16rpx 20rpx;
-  margin-bottom: 20rpx;
+  padding: 12rpx 20rpx;
+  margin-bottom: 12rpx;
 }
 
 .h1 {
@@ -75,50 +75,47 @@
   color: #ffffff;
   font-size: 22rpx;
   line-height: 1.45;
-  padding: 16rpx 32rpx 28rpx;
+  padding: 12rpx 32rpx 20rpx;
 }
 
 .body {
-  padding: 28rpx 24rpx 48rpx;
-}
-
-.section-title {
-  display: block;
-  font-size: 30rpx;
-  font-weight: 700;
-  color: #03234b;
-  margin-bottom: 16rpx;
+  padding: 20rpx 24rpx 48rpx;
 }
 
 .modes {
   display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-  margin-bottom: 20rpx;
+  gap: 4rpx;
+  margin-bottom: 12rpx;
 }
 
 .mode {
-  background: #ffffff;
-  border: 4rpx solid #dbdee1;
-  padding: 20rpx;
+  flex: 1;
+  min-height: 88rpx;
+  background: #03234b;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8rpx;
 }
 
 .mode.is-active {
-  border-color: #ffd200;
-  background: #fff8d0;
+  background: #ffd200;
+  color: #03234b;
 }
 
 .mode-head {
-  display: block;
+  font-size: 26rpx;
   font-weight: 700;
-  color: #03234b;
-  margin-bottom: 6rpx;
+  text-align: center;
 }
 
-.mode-body {
+.mode-hint {
   display: block;
+  margin-bottom: 16rpx;
   font-size: 24rpx;
   color: #425978;
+  line-height: 1.4;
 }
 
 .banner {
@@ -135,15 +132,7 @@
 
 .panel {
   background: #ffffff;
-  margin-bottom: 20rpx;
-}
-
-.panel-head {
-  background: #03234b;
-  color: #ffffff;
-  font-size: 28rpx;
-  font-weight: 700;
-  padding: 20rpx 24rpx;
+  margin-bottom: 0;
 }
 
 .grid {
@@ -176,16 +165,25 @@
 }
 
 .submit {
-  margin: 0 24rpx 24rpx;
+  margin: 0;
   background: #ffd200;
   color: #03234b;
   font-weight: 700;
-  font-size: 30rpx;
+  font-size: 32rpx;
+  min-height: 88rpx;
   border-radius: 0;
 }
 
 .submit::after {
   border: none;
+}
+
+.submit-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 8;
+  background: #ffffff;
+  padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
 }
 
 .results {

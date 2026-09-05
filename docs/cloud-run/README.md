@@ -51,11 +51,13 @@ gcloud run deploy st-mcu-selector \
   --set-env-vars ST_MCU_TRUST_PROXY=true,FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db
 ```
 
-不要用这条命令发还未验收的改版，否则会换掉上面这个 URL 的内容。
+现网不设 `ST_MCU_SERIES_DIVERSIFY`，短名单仍按 RPN 去重，与改版前候选一致。页面（页头、tab、页脚）会更新。
 
 ## 预览（新 URL）
 
-服务名必须是 **`st-mcu-selector-preview`**，不是 `st-mcu-selector`。Cloud Run 会另给一条 `https://st-mcu-selector-preview-….asia-east1.run.app/`。现网地址不变。两个服务可共用同一 GCS 桶。
+服务名必须是 **`st-mcu-selector-preview`**，不是 `st-mcu-selector`。当前 URL：https://st-mcu-selector-preview-460989091461.asia-east1.run.app/
+
+设 `ST_MCU_SERIES_DIVERSIFY=true`，短名单按系列散开。两个服务共用同一 GCS 桶，前端同一套，结果规则不同。
 
 ```bash
 cd st-mcu-selector
@@ -70,7 +72,7 @@ gcloud run deploy st-mcu-selector-preview \
   --memory 2Gi \
   --timeout 300 \
   --max-instances 1 \
-  --set-env-vars ST_MCU_TRUST_PROXY=true,FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db
+  --set-env-vars ST_MCU_TRUST_PROXY=true,FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db,ST_MCU_SERIES_DIVERSIFY=true
 ```
 
 Health: `/healthz`（器件库未就绪时 503）。`/api/health` 含 `cache.source`（`gcs` | `st` | `local`）。Smoke 与回滚见 [deploy-runbook.md](./deploy-runbook.md)。

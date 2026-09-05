@@ -48,7 +48,7 @@ body {
 .hero-inner {
   max-width: var(--page);
   margin: 0 auto;
-  padding: 0 28px 36px;
+  padding: 0 28px 20px;
 }
 
 .brand {
@@ -56,7 +56,6 @@ body {
   align-items: center;
   gap: 14px;
   min-height: 64px;
-  margin-bottom: 28px;
 }
 
 .brand-logo {
@@ -68,36 +67,13 @@ body {
   filter: brightness(0) invert(1);
 }
 
-.brand-name {
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--st-ramp-3);
-}
-
-.yellow-bar {
-  width: min(100%, 860px);
-  margin-left: auto;
+.title-bar {
   background: var(--st-yellow);
   color: var(--st-navy);
-  min-height: 92px;
-  display: flex;
-  align-items: center;
-  padding: 18px 28px;
-}
-
-.yellow-bar h1 {
-  font-size: 36px;
+  font-size: 22px;
   font-weight: 700;
-  line-height: 1.15;
-}
-
-.hero-lead {
-  margin-top: 28px;
-  max-width: 640px;
-  font-size: 18px;
-  line-height: 1.5;
-  color: var(--st-white);
+  line-height: 1.2;
+  padding: 10px 16px;
 }
 
 .message-bar {
@@ -118,60 +94,70 @@ body {
 .page {
   max-width: var(--page);
   margin: 0 auto;
-  padding: 36px 28px 56px;
-}
-
-h2 {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 16px;
+  padding: 24px 28px 56px;
 }
 
 .modes {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 36px;
+  gap: 4px;
+  margin-bottom: 0;
 }
 
 .mode {
   border: 0;
   text-align: left;
   cursor: pointer;
-  background: var(--st-white);
-  color: var(--st-navy);
-  min-height: 168px;
-  padding: 0;
+  background: var(--st-navy);
+  color: var(--st-white);
+  min-height: 0;
+  padding: 12px 16px 14px;
   font-family: inherit;
 }
 
 .mode-head {
-  background: var(--st-navy);
-  color: var(--st-white);
+  display: block;
+  background: transparent;
+  color: inherit;
   font-size: 15px;
   font-weight: 700;
-  padding: 12px 16px;
-}
-
-.mode:nth-child(2) .mode-head {
-  background: var(--st-slate);
-}
-
-.mode:nth-child(3) .mode-head {
-  background: var(--st-ramp-2);
+  padding: 0;
 }
 
 .mode-body {
-  background: var(--st-gray-1);
-  padding: 14px 16px 18px;
-  font-size: 14px;
-  line-height: 1.45;
-  min-height: 108px;
+  display: block;
+  background: transparent;
+  min-height: 0;
+  margin-top: 6px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--st-ramp-3);
 }
 
-.mode.is-active .mode-head {
+.mode.is-active {
   background: var(--st-yellow);
   color: var(--st-navy);
+}
+
+.mode.is-active .mode-body {
+  color: var(--st-navy);
+}
+
+.mode:focus-visible {
+  outline: 2px solid var(--st-yellow);
+  outline-offset: 2px;
+}
+
+.mode.is-active:focus-visible {
+  outline-color: var(--st-navy);
+}
+
+@media (hover: hover) {
+  .mode:hover:not(.is-active) {
+    background: var(--st-slate);
+  }
 }
 
 .stage {
@@ -246,18 +232,18 @@ footer {
   margin: 0 auto;
   padding: 0 28px 28px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 16px;
+  gap: 8px 16px;
   color: var(--st-slate);
   font-size: 12px;
 }
 
 @media (max-width: 860px) {
-  .yellow-bar h1 {
-    font-size: 28px;
+  .title-bar {
+    font-size: 18px;
   }
 
-  .modes,
   .stage,
   .guard {
     grid-template-columns: 1fr;

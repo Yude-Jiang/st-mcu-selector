@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from typing import Any
 
@@ -102,3 +103,28 @@ def diversify_by_series(ranked: list[dict[str, Any]], limit: int) -> list[dict[s
     for item in picked:
         item["other_packages"] = extras.get(item["series"], [])[:6]
     return picked
+
+
+def diversify_by_rpn(ranked: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    picked: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in ranked:
+        group = str(item.get("rpn") or item.get("reference") or item.get("part_number") or "")
+        if group in seen:
+            continue
+        seen.add(group)
+        item["other_packages"] = []
+        picked.append(item)
+        if len(picked) >= limit:
+            break
+    return picked
+
+
+def series_diversify_enabled() -> bool:
+    return os.environ.get("ST_MCU_SERIES_DIVERSIFY", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def pick_shortlist(ranked: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    if series_diversify_enabled():
+        return diversify_by_series(ranked, limit)
+    return diversify_by_rpn(ranked, limit)

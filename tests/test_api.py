@@ -33,6 +33,13 @@ class SelectionApiTests(unittest.TestCase):
         self.assertIn("st.com/content/st_com/en/search.html", facts)
         self.assertIn("与竞品对照", facts)
         self.assertIn("SHORTLIST_KEYS", facts)
+        self.assertIn("class=\"title-bar\"", response.text)
+        self.assertIn("MCU Selector", response.text)
+        self.assertIn("最多给出三个订货号。这是短名单，不是设计签核。", response.text)
+        self.assertIn("数据库匹配只给候选；最多给出三个订货号", response.text)
+        self.assertIn("helon.chen@st.com", response.text)
+        self.assertIn("yude.jiang@st.com", response.text)
+        self.assertIn("footer-date", response.text)
         self.assertIn("/api/recommend", Path(ROOT / "web" / "app.js").read_text(encoding="utf-8"))
 
     def test_recommend_rejects_before_database_ready(self) -> None:
