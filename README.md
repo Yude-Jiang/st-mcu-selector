@@ -9,6 +9,8 @@
 | Google Cloud Run | 网页 | GCS | [docs/cloud-run/README.md](docs/cloud-run/README.md) |
 | 阿里云 SAE | 网页 + 微信小程序 | OSS | [docs/aliyun/README.md](docs/aliyun/README.md) |
 
+微信 request 合法域名：`mp.microelectronics.com`（已 ICP，阿里云）。生产 API：`https://mp.microelectronics.com`。
+
 小程序不能执行 Claude skill，也不能用未备案的 `*.run.app`。只设一个 bucket 环境变量：`ST_MCU_GCS_BUCKET` 或 `ST_MCU_OSS_BUCKET`，不要同时设。
 
 仓库：https://github.com/Yude-Jiang/st-mcu-selector

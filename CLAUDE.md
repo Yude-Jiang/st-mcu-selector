@@ -116,7 +116,7 @@ scripts/{data-source}/transform-{source}.py
 - **描述**: ST MCU Selector，给工程师在网页或微信小程序上完成 MCU 短名单
 - **部署**: 两套并行——Cloud Run `st-mcu-selector`（GCS）与阿里云 SAE（OSS + 已备案域名）。文档分目录，见 `docs/cloud-run/` 与 `docs/aliyun/`
 - **技术栈**: 静态 HTML/CSS/JS + 微信小程序 + FastAPI
-- **线上 URL**: Cloud Run 与 SAE 自定义域名分别填写
+- **线上 URL**: 微信/中国区 `https://mp.microelectronics.com`（已 ICP，阿里云）
 - **GitHub**: https://github.com/Yude-Jiang/st-mcu-selector
 
 ## 架构概览
@@ -157,6 +157,7 @@ docs/aliyun/README.md — OSS 桶、SAE、微信合法域名
 - 竞品对照必须有规格来源说明
 - 微信生产 API 必须挂已 ICP 备案 HTTPS 域名；Cloud Run `*.run.app` 不能配进小程序
 - Cloud Run 用 `ST_MCU_GCS_BUCKET`，阿里云用 `ST_MCU_OSS_BUCKET`，不要同时设置
+- Cloud Run 调 DeepSeek：Secret Manager 名 `VITE_DEEPSEEK_API_KEY`，用 `--set-secrets` 注入运行时环境变量；不要写进网页或 Vite 前端。代码读 `VITE_DEEPSEEK_API_KEY` / `DEEPSEEK_API_KEY` / `ST_MCU_LLM_KEY`
 
 ## 常用命令
 
@@ -165,8 +166,8 @@ docs/aliyun/README.md — OSS 桶、SAE、微信合法域名
 python run.py
 
 # 测试
-python -m unittest tests.test_api tests.test_db_cache
+python -m unittest tests.test_api tests.test_db_cache tests.test_nl_must
 
 # Cloud Run — 见 docs/cloud-run/README.md
-# 阿里云 SAE — 见 docs/aliyun/README.md
+# 阿里云 SAE — 域名整站绑定见 docs/aliyun/sae-bind-domain.md
 ```

@@ -48,7 +48,8 @@ gcloud run deploy st-mcu-selector \
   --memory 2Gi \
   --timeout 300 \
   --max-instances 1 \
-  --set-env-vars ST_MCU_TRUST_PROXY=true,FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db
+  --set-env-vars ST_MCU_TRUST_PROXY=true,FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db \
+  --set-secrets VITE_DEEPSEEK_API_KEY=VITE_DEEPSEEK_API_KEY:latest
 ```
 
 现网不设 `ST_MCU_SERIES_DIVERSIFY`，短名单仍按 RPN 去重，与改版前候选一致。页面（页头、tab、页脚）会更新。
@@ -72,7 +73,26 @@ gcloud run deploy st-mcu-selector-preview \
   --memory 2Gi \
   --timeout 300 \
   --max-instances 1 \
-  --set-env-vars ST_MCU_TRUST_PROXY=true,FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db,ST_MCU_SERIES_DIVERSIFY=true
+  --set-env-vars ST_MCU_TRUST_PROXY=true,FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db,ST_MCU_SERIES_DIVERSIFY=true \
+  --set-secrets VITE_DEEPSEEK_API_KEY=VITE_DEEPSEEK_API_KEY:latest
 ```
 
-Health: `/healthz`（器件库未就绪时 503）。`/api/health` 含 `cache.source`（`gcs` | `st` | `local`）。Smoke 与回滚见 [deploy-runbook.md](./deploy-runbook.md)。
+Health: `/healthz`（器件库未就绪时 503）。`/api/health` 含 `cache.source`（`gcs` | `st` | `local`）和 `llm.configured`。Smoke 与回滚见 [deploy-runbook.md](./deploy-runbook.md)。
+
+## DeepSeek（Secret Manager）
+
+Secret 名沿用 `VITE_DEEPSEEK_API_KEY`（历史 Vite 命名）。这是 **Cloud Run 运行时环境变量**，不会打进网页；不要用 `--set-env-vars` 明文写 key。
+
+`--set-env-vars` 与 `--set-secrets` 每次都会整组覆盖，deploy 必须把现网/预览需要的环境变量和 secret **全部写全**。现网不要带 `ST_MCU_SERIES_DIVERSIFY`。
+
+第一次把 secret 绑到 Cloud Run 默认计算账号：
+
+```bash
+PROJECT_NUMBER=$(gcloud projects describe st-china-ai-force --format='value(projectNumber)')
+gcloud secrets add-iam-policy-binding VITE_DEEPSEEK_API_KEY \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role=roles/secretmanager.secretAccessor \
+  --project=st-china-ai-force
+```
+
+服务读环境变量顺序：`VITE_DEEPSEEK_API_KEY` → `DEEPSEEK_API_KEY` → `ST_MCU_LLM_KEY`。模型默认 `deepseek-chat`。未绑 secret 或 DeepSeek 不可达时，「填入下方表单」回退关键词抽取。短名单仍走 `/api/recommend`，模型不报料号。

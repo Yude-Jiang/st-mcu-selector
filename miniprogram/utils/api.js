@@ -17,4 +17,8 @@ function health() {
   return request({ url: "/api/health", method: "GET" });
 }
 
-module.exports = { recommend, compare, inspect, health };
+function parseRequirements(text) {
+  return request({ url: "/api/parse-requirements", method: "POST", data: { text } });
+}
+
+module.exports = { recommend, compare, inspect, health, parseRequirements };

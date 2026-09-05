@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from routes.health import router as health_router
+from routes.parse import router as parse_router
 from routes.selection import router as selection_router
 
 WEB_DIR = Path(__file__).resolve().parents[1] / "web"
@@ -22,4 +23,5 @@ app.add_middleware(
 )
 app.include_router(health_router)
 app.include_router(selection_router)
+app.include_router(parse_router)
 app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")

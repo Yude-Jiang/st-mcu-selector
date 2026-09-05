@@ -24,7 +24,8 @@ class SelectionApiTests(unittest.TestCase):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         self.assertIn("id=\"root\"", response.text)
-        self.assertIn("./facts.js", response.text)
+        self.assertIn("./parse.js", response.text)
+        self.assertIn("/api/parse-requirements", Path(ROOT / "web" / "parse.js").read_text(encoding="utf-8"))
         self.assertIn("name=\"motor_timers\"", response.text)
         self.assertIn("name=\"hrtim\"", response.text)
         self.assertIn("name=\"usb\"", response.text)
@@ -59,6 +60,20 @@ class SelectionApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["recommendations"][0]["part_number"], "STM32G474RET3")
 
+    def test_parse_requirements_does_not_need_database(self) -> None:
+        os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
+        os.environ.pop("DEEPSEEK_API_KEY", None)
+        os.environ.pop("ST_MCU_LLM_KEY", None)
+        response = self.client.post(
+            "/api/parse-requirements",
+            json={"text": "电机控制，主频至少 170 MHz，LQFP64，要 FDCAN"},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["application"], "motor_control")
+        self.assertEqual(payload["must"]["frequency_mhz"], {"min": 170})
+        self.assertNotIn("recommendations", payload)
+
     def test_inspect_not_found_is_structured(self) -> None:
         readiness.mark_ready()
         fake = {"found": False, "part_number": "ZZZ", "suggestions": ["STM32G474RET3"]}
@@ -66,6 +81,32 @@ class SelectionApiTests(unittest.TestCase):
             response = self.client.get("/api/inspect", params={"part_number": "ZZZPART"})
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["found"])
+
+    def test_health_reports_llm_without_exposing_key(self) -> None:
+        os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
+        os.environ.pop("DEEPSEEK_API_KEY", None)
+        os.environ.pop("ST_MCU_LLM_KEY", None)
+        readiness.mark_ready()
+        with patch("routes.health.engine_adapter.database_status", return_value={"counts": {"cpn": 1}}):
+            response = self.client.get("/api/health")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertFalse(payload["llm"]["configured"])
+        self.assertEqual(payload["llm"]["model"], "deepseek-chat")
+        dumped = str(payload).lower()
+        self.assertNotIn("api_key", dumped)
+        self.assertNotIn("sk-", dumped)
+
+    def test_health_llm_configured_reads_vite_secret_name(self) -> None:
+        os.environ["VITE_DEEPSEEK_API_KEY"] = "test"
+        readiness.mark_ready()
+        try:
+            with patch("routes.health.engine_adapter.database_status", return_value={"counts": {"cpn": 1}}):
+                response = self.client.get("/api/health")
+        finally:
+            os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["llm"]["configured"])
 
     def test_cors_allows_wechat_origin(self) -> None:
         response = self.client.get(
@@ -93,6 +134,13 @@ class SelectionApiTests(unittest.TestCase):
         self.assertIn("/api/compare", text)
         self.assertIn("/api/inspect", text)
         self.assertIn("/api/health", text)
+        self.assertIn("/api/parse-requirements", text)
+
+    def test_miniprogram_production_uses_aliyun_legal_host(self) -> None:
+        text = Path(ROOT / "miniprogram" / "config.js").read_text(encoding="utf-8")
+        self.assertIn("https://mp.microelectronics.com", text)
+        self.assertIn("mp.microelectronics.com", text)
+        self.assertNotIn("REPLACE-WITH-ICP-DOMAIN", text)
 
 
 if __name__ == "__main__":

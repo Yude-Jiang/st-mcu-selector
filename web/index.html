@@ -48,6 +48,13 @@
       <p class="banner" id="banner"></p>
 
       <form id="form-requirements" class="form-panel is-open" role="tabpanel" aria-labelledby="tab-requirements">
+        <div class="nl-box">
+          <label class="field">用一句话描述需求（可选）
+            <textarea id="nl-text" maxlength="500" placeholder="例如：电机控制，主频至少 170 MHz，LQFP64，要 FDCAN。不要写价格或交期。"></textarea>
+          </label>
+          <button type="button" id="nl-fill">填入下方表单</button>
+          <p class="nl-notes" id="nl-notes">大模型只改写硬约束，短名单仍由数据库计算。请核对表单后再查询。</p>
+        </div>
         <div class="form-grid">
           <label class="field">应用
             <select name="application">
@@ -167,5 +174,6 @@
   </div>
   <script src="./facts.js"></script>
   <script src="./app.js"></script>
+  <script src="./parse.js"></script>
 </body>
 </html>

@@ -1,0 +1,9 @@
+# 先在 SAE「YAML创建」上传本文件，再建应用。
+# namespace 短名：st-mcu-selector（不要写成 cn-hangzhou:st-mcu-selector）
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: st-mcu-selector
+  annotations:
+    sae.aliyun.com/vpc-id: vpc-bp1ced7m9lghb0mh65s1a
+spec: {}

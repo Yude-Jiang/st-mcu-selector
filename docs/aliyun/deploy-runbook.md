@@ -7,7 +7,7 @@ Service: SAE `st-mcu-selector`，默认 region `cn-hangzhou`，port 8080。镜�
 ## 1) Post-deploy smoke
 
 ```bash
-npm run smoke -- --url=https://<your-icp-domain>
+npm run smoke -- --url=https://mp.microelectronics.com
 ```
 
 Expected:
@@ -37,4 +37,4 @@ aliyun sae DeployApplication \
 
 1. 再跑 smoke
 2. 网页三种表单仍能出短名单
-3. 微信开发者工具对同一域名 `wx.request` 成功（生产需已配合法域名）
+3. 微信开发者工具对 `https://mp.microelectronics.com` 的 `wx.request` 成功（合法域名：`mp.microelectronics.com`）

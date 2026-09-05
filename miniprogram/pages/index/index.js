@@ -73,6 +73,8 @@ Page({
       hrtim: "",
     },
     inspectPart: "",
+    recNl: "",
+    nlNotes: "大模型只改写硬约束，短名单仍由数据库计算。请核对后再查询。",
   },
 
   onShow() {
@@ -103,8 +105,38 @@ Page({
     this.setData({ [`cmp.${field}`]: event.detail.value });
   },
 
-  onInspectInput(event) {
-    this.setData({ inspectPart: event.detail.value });
+  onNlInput(event) {
+    this.setData({ recNl: event.detail.value });
+  },
+
+  async onNlFill() {
+    const text = String(this.data.recNl || "").trim();
+    if (text.length < 4) {
+      this.setBanner("请先写一句可核对的需求。", true);
+      return;
+    }
+    this.setBanner("正在把需求改写成表单…", false);
+    try {
+      const draft = await api.parseRequirements(text);
+      const filled = form.applyRecommendDraft(
+        this.data.rec,
+        draft,
+        APPLICATIONS,
+        PACKAGES,
+        POLICIES,
+      );
+      this.setData({
+        rec: { ...filled.rec, package_type: PACKAGES[filled.packageIndex].id },
+        applicationIndex: filled.applicationIndex,
+        packageIndex: filled.packageIndex,
+        policyIndex: filled.policyIndex,
+        nlNotes: filled.notes || "已填入表单，请核对后再给出短名单。",
+        banner: "",
+        bannerError: false,
+      });
+    } catch (error) {
+      this.setBanner(error.message, true);
+    }
   },
 
   onApplicationChange(event) {

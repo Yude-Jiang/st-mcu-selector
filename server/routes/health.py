@@ -1,23 +1,35 @@
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 import engine_adapter
+import nl_must
 import readiness
 
 router = APIRouter()
 
 
-def _not_ready_payload() -> dict[str, str]:
+def _llm_status() -> dict[str, Any]:
+    return {
+        "configured": nl_must.llm_configured(),
+        "model": os.environ.get("ST_MCU_LLM_MODEL", "deepseek-chat"),
+    }
+
+
+def _not_ready_payload() -> dict[str, Any]:
     snap = readiness.snapshot()
     if snap["status"] == "starting":
-        return {"status": "starting", "error": "器件库正在加载，请稍候。"}
-    if snap["status"] == "error":
-        return {"status": "error", "error": snap.get("error") or "器件库加载失败。"}
-    return {"status": snap["status"], "error": "器件库尚未就绪。"}
+        payload: dict[str, Any] = {"status": "starting", "error": "器件库正在加载，请稍候。"}
+    elif snap["status"] == "error":
+        payload = {"status": "error", "error": snap.get("error") or "器件库加载失败。"}
+    else:
+        payload = {"status": snap["status"], "error": "器件库尚未就绪。"}
+    payload["llm"] = _llm_status()
+    return payload
 
 
 @router.get("/healthz")
@@ -36,11 +48,15 @@ def api_health() -> JSONResponse:
     try:
         status = engine_adapter.database_status()
         payload: dict[str, Any] = {"status": "ok", **status}
+        payload["llm"] = _llm_status()
         if snap.get("cache"):
             payload["cache"] = snap["cache"]
         return JSONResponse(payload)
     except Exception as exc:
-        return JSONResponse({"status": "error", "error": str(exc)}, status_code=503)
+        return JSONResponse(
+            {"status": "error", "error": str(exc), "llm": _llm_status()},
+            status_code=503,
+        )
 
 
 @router.get("/api/database")

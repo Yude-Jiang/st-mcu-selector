@@ -1,5 +1,5 @@
 # Build FastAPI image, push ACR, deploy SAE.
-# Required: docker, aliyun CLI, ACR_NAMESPACE
+# Required: docker, aliyun CLI. ACR namespace defaults to st-mcu-selector.
 # Optional: SAE_APP_ID
 param(
   [string]$Environment = "production"
@@ -8,15 +8,11 @@ param(
 $ErrorActionPreference = "Stop"
 $Region = if ($env:ALIYUN_REGION) { $env:ALIYUN_REGION } else { "cn-hangzhou" }
 $Registry = if ($env:ACR_REGISTRY) { $env:ACR_REGISTRY } else { "registry.$Region.aliyuncs.com" }
-$Namespace = $env:ACR_NAMESPACE
+$Namespace = if ($env:ACR_NAMESPACE) { $env:ACR_NAMESPACE } else { "st-mcu-selector" }
 $AppName = if ($env:SAE_APP_NAME) { $env:SAE_APP_NAME } else { "st-mcu-selector" }
 $NamespaceId = if ($env:SAE_NAMESPACE_ID) { $env:SAE_NAMESPACE_ID } else { $Region }
 $Tag = if ($env:IMAGE_TAG) { $env:IMAGE_TAG } else {
   try { (git rev-parse --short HEAD).Trim() } catch { Get-Date -Format "yyyyMMddHHmm" }
-}
-
-if (-not $Namespace) {
-  throw "Set ACR_NAMESPACE to your ACR namespace."
 }
 
 $Image = "$Registry/$Namespace/${AppName}:$Tag"
@@ -44,7 +40,7 @@ if (-not $env:SAE_APP_ID) {
 
 aliyun sae CreateApplication --region $Region --AppName $AppName --NamespaceId $NamespaceId --PackageType Image --ImageUrl $Image --Cpu 1000 --Memory 2048 --Replicas 1 --Port 8080 --Deploy true --Envs '$Envs' --TerminationGracePeriodSeconds 30 --Readiness '$Readiness'
 
-Bind an ICP-filed HTTPS domain, then set miniprogram/config.js production + WeChat request 合法域名.
+Bind mp.microelectronics.com to SAE (or reverse-proxy /api/*). WeChat request 合法域名: mp.microelectronics.com
 "@
   exit 0
 }

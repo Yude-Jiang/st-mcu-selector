@@ -1,8 +1,13 @@
 # 阿里云 SAE + 微信小程序
 
-中国区终端入口：网页与微信小程序共用同一套 FastAPI（recommend / compare / inspect）。生产必须挂**已 ICP 备案**的 HTTPS 域名（微信不接受 `*.run.app`）。
+中国区终端入口：网页与微信小程序共用同一套 FastAPI（recommend / compare / inspect）。
 
-器件库缓存用 **OSS**（`ST_MCU_OSS_BUCKET`），不要设 `ST_MCU_GCS_BUCKET`。
+生产域名（已 ICP、阿里云）：**`https://mp.microelectronics.com`**  
+微信 request 合法域名只填 host：`mp.microelectronics.com`。
+
+**把域名整站指到 SAE：** 按 [sae-bind-domain.md](./sae-bind-domain.md) 做（ACR → 推镜像 → 建应用 → CLB/证书 → 改 `mp` 解析）。
+
+器件库缓存用 **OSS**（`ST_MCU_OSS_BUCKET`）可第二步再加，不要设 `ST_MCU_GCS_BUCKET`。
 
 Cloud Run / GCS 说明见 [`../cloud-run/README.md`](../cloud-run/README.md)。
 
@@ -27,7 +32,7 @@ ETag 与 ST zip 一致则从 OSS 拷贝；变化则拉新包、写新对象、�
 
 ```powershell
 # 一次性：aliyun configure；docker login registry.cn-hangzhou.aliyuncs.com
-$env:ACR_NAMESPACE = "<your-acr-namespace>"
+$env:ACR_NAMESPACE = "st-mcu-selector"
 $env:ALIYUN_REGION = "cn-hangzhou"
 $env:ST_MCU_OSS_BUCKET = "<oss-bucket>"
 # 第二次起：
@@ -37,7 +42,7 @@ python -m unittest tests.test_api tests.test_db_cache
 ```
 
 ```bash
-export ACR_NAMESPACE=<your-acr-namespace>
+export ACR_NAMESPACE=st-mcu-selector
 export ALIYUN_REGION=cn-hangzhou
 export ST_MCU_OSS_BUCKET=<oss-bucket>
 # export SAE_APP_ID=<sae-app-id>
@@ -47,9 +52,9 @@ bash scripts/aliyun-deploy.sh production
 
 首次未设 `SAE_APP_ID` 时，脚本会打印 `CreateApplication`。创建后：
 
-1. SAE 绑定已 ICP 备案的 HTTPS 自定义域名
-2. 微信公众平台 → 开发 → 开发管理 → 服务器域名：填入 **request 合法域名**
-3. `miniprogram/config.js` 把 `ENV` 改为 `production`，`HOSTS.production` 写成该 HTTPS 地址
+1. SAE / SLB / 网关把 `mp.microelectronics.com` 指到本服务（若域名上已有站点，只反代 `/api/*` 与 `/healthz`）
+2. 微信公众平台 request 合法域名：`mp.microelectronics.com`
+3. 体验版把 `miniprogram/config.js` 的 `ENV` 改为 `production`（已指向 `https://mp.microelectronics.com`）
 4. 上传小程序代码
 
 Health: `/healthz`（器件库未就绪时 503）。Smoke 与回滚见 [deploy-runbook.md](./deploy-runbook.md)。

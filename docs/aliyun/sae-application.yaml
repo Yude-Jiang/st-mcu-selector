@@ -1,0 +1,74 @@
+# 先创建 docs/aliyun/sae-namespace.yaml，再上传本文件。
+# namespace 只填短名 st-mcu-selector，不要写 cn-hangzhou:st-mcu-selector。
+# 镜像须已推到 ACR：registry.cn-hangzhou.aliyuncs.com/st-mcu-selector/st-mcu-selector:latest
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: st-mcu-selector
+  namespace: st-mcu-selector
+  annotations:
+    sae.aliyun.com/new-sae-version: std
+    sae.aliyun.com/type: Image
+    sae.aliyun.com/timezone: Asia/Shanghai
+    sae.aliyun.com/vpc-id: vpc-bp1ced7m9lghb0mh65s1a
+    sae.aliyun.com/vswitch-list: vsw-bp1a9cpyaeh5rskd668r5
+    sae.aliyun.com/security-group-id: sg-bp15omyb27rgsgnur7h6
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      sae.aliyun.com/app-name: st-mcu-selector
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        sae.aliyun.com/app-name: st-mcu-selector
+    spec:
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: main
+          image: registry.cn-hangzhou.aliyuncs.com/st-mcu-selector/st-mcu-selector:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: ST_MCU_AUTO_UPDATE
+              value: if_missing
+            - name: FORWARDED_ALLOW_IPS
+              value: "*"
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: "1"
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 90
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 120
+            timeoutSeconds: 5
+            periodSeconds: 20
+            failureThreshold: 6

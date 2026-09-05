@@ -260,9 +260,15 @@ async function refreshHealth() {
     if (response.ok) {
       const count = payload.counts && payload.counts.cpn ? payload.counts.cpn : "";
       $("db-status").textContent = count ? `器件库就绪 · ${count} 个订货号` : "器件库就绪";
-      return;
+    } else {
+      $("db-status").textContent = payload.error || "器件库未就绪";
     }
-    $("db-status").textContent = payload.error || "器件库未就绪";
+    const notes = $("nl-notes");
+    if (notes && payload.llm && notes.dataset.source !== "parse") {
+      notes.textContent = payload.llm.configured
+        ? "DeepSeek 会把这句话改成硬约束，短名单仍由数据库计算。请核对表单后再查询。"
+        : "未配置 DeepSeek 时按关键词抽取。短名单仍由数据库计算。请核对表单后再查询。";
+    }
   } catch (error) {
     $("db-status").textContent = "无法连接选型服务";
   }

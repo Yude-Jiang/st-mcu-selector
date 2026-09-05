@@ -57,6 +57,36 @@
   grid-column: span 3;
 }
 
+.nl-box {
+  padding: 16px 16px 0;
+}
+
+.nl-box textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.nl-box button {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  border: 0;
+  background: var(--st-navy);
+  color: var(--st-white);
+  min-height: 40px;
+  padding: 0 16px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.nl-notes {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--st-slate);
+  line-height: 1.45;
+}
+
 .checks {
   display: flex;
   flex-wrap: wrap;

@@ -32,6 +32,14 @@
     <view wx:if="{{banner}}" class="banner {{bannerError ? 'error' : ''}}">{{banner}}</view>
 
     <view wx:if="{{mode === 'requirements'}}" class="panel">
+      <view class="nl-box">
+        <view class="field">
+          <text>用一句话描述需求（可选）</text>
+          <textarea value="{{recNl}}" maxlength="500" bindinput="onNlInput" placeholder="例如：电机控制，主频至少 170 MHz，LQFP64，要 FDCAN"/>
+        </view>
+        <button class="nl-fill" hover-class="none" bindtap="onNlFill">填入下方表单</button>
+        <text class="nl-notes">{{nlNotes}}</text>
+      </view>
       <view class="grid">
         <view class="field">
           <text>应用</text>

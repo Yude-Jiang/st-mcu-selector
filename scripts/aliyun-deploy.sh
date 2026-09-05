@@ -1,21 +1,16 @@
 #!/usr/bin/env bash
 # Build the FastAPI image, push to ACR, deploy SAE.
-# Required: docker, aliyun CLI, ACR_NAMESPACE
+# Required: docker, aliyun CLI. ACR namespace defaults to st-mcu-selector.
 # Optional: SAE_APP_ID (omit on first run — script prints CreateApplication)
 set -euo pipefail
 
 ENVIRONMENT="${1:-production}"
 REGION="${ALIYUN_REGION:-cn-hangzhou}"
 REGISTRY="${ACR_REGISTRY:-registry.${REGION}.aliyuncs.com}"
-NAMESPACE="${ACR_NAMESPACE:-}"
+NAMESPACE="${ACR_NAMESPACE:-st-mcu-selector}"
 APP_NAME="${SAE_APP_NAME:-st-mcu-selector}"
 NAMESPACE_ID="${SAE_NAMESPACE_ID:-${REGION}}"
 TAG="${IMAGE_TAG:-$(git rev-parse --short HEAD 2>/dev/null || date +%Y%m%d%H%M)}"
-
-if [[ -z "$NAMESPACE" ]]; then
-  echo "Set ACR_NAMESPACE to your ACR namespace (容器镜像服务命名空间)." >&2
-  exit 1
-fi
 
 IMAGE="${REGISTRY}/${NAMESPACE}/${APP_NAME}:${TAG}"
 IMAGE_LATEST="${REGISTRY}/${NAMESPACE}/${APP_NAME}:latest"
@@ -55,8 +50,9 @@ aliyun sae CreateApplication \\
   --TerminationGracePeriodSeconds 30 \\
   --Readiness '${READINESS}'
 
-Then bind an ICP-filed HTTPS domain in SAE (应用设置 → SLB/网关/自定义域名)
-and put that host in miniprogram/config.js production + 微信 request 合法域名.
+Then point mp.microelectronics.com at SAE (or reverse-proxy /api/*).
+WeChat request 合法域名: mp.microelectronics.com
+ENV=production already uses https://mp.microelectronics.com in miniprogram/config.js.
 EOF
   exit 0
 fi
@@ -72,4 +68,4 @@ aliyun sae DeployApplication \
   --Readiness "$READINESS"
 
 echo "==> Deploy submitted: ${IMAGE}"
-echo "Smoke: npm run smoke -- --url=https://<your-icp-domain>"
+echo "Smoke: npm run smoke -- --url=https://mp.microelectronics.com"

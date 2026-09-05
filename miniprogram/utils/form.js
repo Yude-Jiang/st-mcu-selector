@@ -41,8 +41,42 @@ function toCards(payload) {
   return (payload.recommendations || []).map((item, index) => facts.shortlistModel(item, index, mode));
 }
 
+function applyRecommendDraft(fields, draft, applications, packages, policies) {
+  const must = draft.must || {};
+  const rec = { ...fields };
+  [
+    "frequency_mhz",
+    "flash_kb",
+    "ram_kb",
+    "temperature_max_c",
+    "fdcan",
+    "usb",
+    "motor_timers",
+    "hrtim",
+  ].forEach((name) => {
+    const constraint = must[name];
+    rec[name] = constraint && constraint.min != null ? String(constraint.min) : "";
+  });
+  rec.pin_count = must.pin_count && must.pin_count.max != null ? String(must.pin_count.max) : "";
+  const packageType = Array.isArray(must.package_type) ? must.package_type[0] : "";
+  const packageIndex = Math.max(0, packages.findIndex((item) => item.id === packageType));
+  const applicationIndex = Math.max(0, applications.findIndex((item) => item.id === (draft.application || "")));
+  const policyId = draft.unknown_policy || "allow_risk";
+  const policyIndex = Math.max(0, policies.findIndex((item) => item.id === policyId));
+  const notes = (draft.notes || []).join(" ");
+  return { rec, packageIndex, applicationIndex, policyIndex, notes };
+}
+
 function toInspectCard(payload) {
   return facts.inspectModel(payload);
 }
 
-module.exports = { numberOrNull, collectMust, collectSpecs, factChips, toCards, toInspectCard };
+module.exports = {
+  numberOrNull,
+  collectMust,
+  collectSpecs,
+  factChips,
+  toCards,
+  applyRecommendDraft,
+  toInspectCard,
+};

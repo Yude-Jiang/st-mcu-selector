@@ -15,6 +15,7 @@ Expected:
 - Homepage `200`，含 `id="root"` 与 ST MCU Selector
 - `/healthz` 就绪为 `200`，加载中为 `503`
 - `/api/health` 含 `cache.source`（`gcs` | `st` | `local`）与 `cache.stale`
+- `/api/health` 含 `llm.configured`（boolean）与 `llm.model`；不要出现 API key
 
 ## 2) Rollback
 

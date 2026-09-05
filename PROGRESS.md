@@ -12,4 +12,5 @@
 - [x] 文档拆分：`docs/cloud-run/`（GCS）与 `docs/aliyun/`（OSS / 小程序）
 - [x] 器件库对象缓存（ETag；GCS 或 OSS 二选一）
 - [ ] Cloud Shell：建 GCS 桶并 `gcloud run deploy`（见 `docs/cloud-run/`）
-- [ ] 阿里云：ACR push、SAE 应用、已备案 HTTPS、微信合法域名（见 `docs/aliyun/`）
+- [x] 微信 request 合法域名定为 `mp.microelectronics.com`（已 ICP，阿里云）
+- [ ] 按 `docs/aliyun/sae-bind-domain.md`：ACR 推镜像、建 SAE、`mp.microelectronics.com` 整站指到该应用

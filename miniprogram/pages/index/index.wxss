@@ -142,6 +142,41 @@
   padding: 24rpx;
 }
 
+.nl-box {
+  padding: 24rpx 24rpx 0;
+}
+
+.nl-box textarea {
+  min-height: 140rpx;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 28rpx;
+  color: #03234b;
+  border: 2rpx solid #dbdee1;
+  padding: 16rpx;
+}
+
+.nl-fill {
+  margin: 16rpx 0 0;
+  background: #03234b;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 28rpx;
+  border-radius: 0;
+}
+
+.nl-fill::after {
+  border: none;
+}
+
+.nl-notes {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #425978;
+  line-height: 1.4;
+}
+
 .field {
   display: flex;
   flex-direction: column;
