@@ -87,6 +87,7 @@ scripts/{data-source}/transform-{source}.py
 格式: [日期] [来源项目] 教训内容
 -->
 
+- [2026-09] [st-mcu-kv-web] 微信小程序 request 合法域名必须是已 ICP 备案的 HTTPS；GCP `*.run.app` 不能用。中国区后端用阿里云 SAE + 自定义域名。
 - [2024-12] [analog-pd-dashboard] A 股财报数据是 YTD 累计,必须差减上季度得到单季值
 - [2024-12] [analog-pd-dashboard] AkShare 千元单位需 ×0.1 转万元,不是 ×10000
 - [2025-01] [resume-ai-screener] Firebase Anonymous Auth 需在控制台手动启用,默认关闭
@@ -112,10 +113,10 @@ scripts/{data-source}/transform-{source}.py
 
 ## 项目信息
 
-- **描述**: ST MCU Selector，给工程师在网页上完成 MCU 短名单
-- **部署**: Cloud Run `st-mcu-selector` on `st-china-ai-force` / `asia-east1`
-- **技术栈**: 静态 HTML/CSS/JS + nginx
-- **线上 URL**: [部署后填写]
+- **描述**: ST MCU Selector，给工程师在网页或微信小程序上完成 MCU 短名单
+- **部署**: 阿里云 SAE `st-mcu-selector`，默认 region `cn-hangzhou`（ACR + OSS + 已备案自定义域名）
+- **技术栈**: 静态 HTML/CSS/JS + 微信小程序 + FastAPI
+- **线上 URL**: [SAE 自定义域名填写]
 - **GitHub**: [repo URL]
 
 ## 架构概览
@@ -124,31 +125,37 @@ scripts/{data-source}/transform-{source}.py
 
 ```
 web/: ST Key Visual 单页（推荐 / 竞品对照 / 查看订货号）
-nginx.conf: Cloud Run port 8080 与 /healthz
+miniprogram/: 微信小程序表单，wx.request 调同一套 API
+server/routes/: /api/recommend /api/compare /api/inspect
+scripts/aliyun-deploy.ps1: ACR 推镜像 + SAE 发布
 ```
 
 ### 关键文件
 
 ```
-web/index.html  — 页面结构与 TDK
-web/styles.css  — ST 色板、Arial、message bar
-web/app.js      — 三种问法示例切换
-Dockerfile      — nginx 静态发布
+web/index.html — 页面结构与 TDK
+web/styles.css — ST 色板、Arial、message bar
+web/app.js — 网页三种问法
+miniprogram/config.js — apiBase（开发本机 / 生产阿里云域名）
+miniprogram/utils/api.js — 与 skill 对应的三个查询
+Dockerfile — FastAPI + 静态页，port 8080
 ```
 
 ## 项目特定代码规范
 
-- 静态页与表单在 `web/`，API 在 `server/routes/`
-- 字体只用 Arial；颜色只用 ST Dark Blue / Yellow / Light Blue / gray ramp
+- 静态页与表单在 `web/`，小程序在 `miniprogram/`，API 在 `server/routes/`
+- 网页字体只用 Arial；小程序用系统 UI 字体，色板仍锁定 ST Dark Blue / Yellow / Light Blue / gray ramp
 - 黄底必须用深蓝字，禁止白字配黄底
 - 不使用投影、发光、非 ST 渐变
 - 终端用户页面只开放 recommend / compare / inspect，不开放数据库更新
 
 ## 项目特定约束
 
-- 选型查询走本服务 API，不要求用户使用 ChatGPT
+- 选型查询走本服务 API，不要求用户使用 ChatGPT，也不在小程序内跑 Claude skill
 - 不承诺引脚兼容、价格、交期
 - 竞品对照必须有规格来源说明
+- 生产 API 必须挂已 ICP 备案 HTTPS 域名，才能配进微信 request 合法域名
+- 本项目云端用阿里云 SAE / ACR / OSS，不用 Google Cloud Run / GCS
 
 ## 常用命令
 
@@ -157,8 +164,10 @@ Dockerfile      — nginx 静态发布
 python run.py
 
 # 测试
-python -m unittest tests.test_api
+python -m unittest tests.test_api tests.test_db_cache
 
-# 部署
-gcloud run deploy st-mcu-selector --source . --project st-china-ai-force --region asia-east1 --port 8080 --allow-unauthenticated --memory 2Gi --timeout 300 --max-instances 1
+# 部署（PowerShell）
+$env:ACR_NAMESPACE="<namespace>"
+$env:ST_MCU_OSS_BUCKET="<bucket>"
+.\scripts\aliyun-deploy.ps1 production
 ```

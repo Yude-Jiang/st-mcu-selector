@@ -22,7 +22,7 @@ erDiagram
 2. 竞品对照必须要求官方 datasheet 或用户提供的核实规格，不得从料号推断
 3. 数据来源只能写 ST 公开 MCUFinder 数据包，不得声称复现 CubeMX Selector
 4. Key Visual 锁定 Arial 与 ST 色板：`#03234B` `#FFD200` `#3CB4E6`
-5. 终端用户通过网页完成推荐、竞品对照和订货号查询，不得把 ChatGPT MCP 当作唯一入口
+5. 终端用户通过网页或微信小程序完成推荐、竞品对照和订货号查询，不得把 ChatGPT MCP 当作唯一入口
 
 ## 术语表
 
@@ -55,5 +55,6 @@ erDiagram
 
 | 系统 | 用途 | 认证方式 | 限制 |
 |------|------|---------|------|
-| ChatGPT MCP | 实际选型 | 公网 HTTPS `/mcp` | 本页不调用 |
-| Cloud Run | 托管静态页 | GCP 项目权限 | port 8080 |
+| ChatGPT MCP | 实际选型（内部） | 公网 HTTPS `/mcp` | 终端用户入口不依赖它 |
+| 阿里云 SAE | 托管 API 与静态页 | 阿里云账号 / RAM | port 8080，需已备案自定义域名 |
+| 微信小程序 | 工程师表单查询 | AppID + request 合法域名 | 生产必须 HTTPS + ICP |

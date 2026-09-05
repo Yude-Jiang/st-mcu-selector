@@ -1,0 +1,9 @@
+page {
+  background: #eeeff1;
+  color: #03234b;
+  font-family: Helvetica, "PingFang SC", sans-serif;
+  font-size: 28rpx;
+}
+
+.navy { color: #03234b; }
+.yellow { background: #ffd200; color: #03234b; }

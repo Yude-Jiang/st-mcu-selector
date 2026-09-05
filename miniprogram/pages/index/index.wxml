@@ -1,0 +1,176 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-accent"></view>
+    <view class="brand">
+      <view class="brand-mark">ST</view>
+      <view class="brand-copy">
+        <text class="brand-name">STMicroelectronics</text>
+        <text class="db-pill">{{dbStatus}}</text>
+      </view>
+    </view>
+    <view class="yellow-bar">
+      <text class="h1">ST MCU Selector</text>
+    </view>
+    <text class="lead">填写必须满足的规格，或对照已核实的竞品参数，得到最多三个订货号。这是短名单，不是设计签核。</text>
+  </view>
+  <view class="message-bar">数据库匹配只给候选；封装引脚、外设并发、认证、价格和供货仍须核对当前 datasheet。</view>
+
+  <view class="body">
+    <text class="section-title">选择任务</text>
+    <view class="modes">
+      <view class="mode {{mode === 'requirements' ? 'is-active' : ''}}" data-mode="requirements" bindtap="switchMode">
+        <text class="mode-head">按需求推荐</text>
+        <text class="mode-body">频率、Flash、封装、温度和接口写成必须条件。</text>
+      </view>
+      <view class="mode {{mode === 'competitor' ? 'is-active' : ''}}" data-mode="competitor" bindtap="switchMode">
+        <text class="mode-head">竞品对照</text>
+        <text class="mode-body">必须提供官方 datasheet 或已核实规格。</text>
+      </view>
+      <view class="mode {{mode === 'inspect' ? 'is-active' : ''}}" data-mode="inspect" bindtap="switchMode">
+        <text class="mode-head">查看订货号</text>
+        <text class="mode-body">输入 STM32 订货号，查看库中的封装与接口。</text>
+      </view>
+    </view>
+
+    <view wx:if="{{banner}}" class="banner {{bannerError ? 'error' : ''}}">{{banner}}</view>
+
+    <view wx:if="{{mode === 'requirements'}}" class="panel">
+      <view class="panel-head">按需求推荐</view>
+      <view class="grid">
+        <view class="field">
+          <text>应用</text>
+          <picker range="{{applications}}" range-key="label" value="{{applicationIndex}}" bindchange="onApplicationChange">
+            <view class="picker">{{applications[applicationIndex].label}}</view>
+          </picker>
+        </view>
+        <view class="field">
+          <text>主频至少 (MHz)</text>
+          <input type="number" data-field="frequency_mhz" value="{{rec.frequency_mhz}}" bindinput="onRecInput" placeholder="例如 170"/>
+        </view>
+        <view class="field">
+          <text>Flash 至少 (KB)</text>
+          <input type="number" data-field="flash_kb" value="{{rec.flash_kb}}" bindinput="onRecInput" placeholder="例如 512"/>
+        </view>
+        <view class="field">
+          <text>RAM 至少 (KB)</text>
+          <input type="number" data-field="ram_kb" value="{{rec.ram_kb}}" bindinput="onRecInput"/>
+        </view>
+        <view class="field">
+          <text>引脚数不超过</text>
+          <input type="number" data-field="pin_count" value="{{rec.pin_count}}" bindinput="onRecInput" placeholder="例如 64"/>
+        </view>
+        <view class="field">
+          <text>封装</text>
+          <picker range="{{packages}}" range-key="label" value="{{packageIndex}}" bindchange="onPackageChange">
+            <view class="picker">{{packages[packageIndex].label}}</view>
+          </picker>
+        </view>
+        <view class="field">
+          <text>最高工作温度至少 (°C)</text>
+          <input type="digit" data-field="temperature_max_c" value="{{rec.temperature_max_c}}" bindinput="onRecInput" placeholder="例如 125"/>
+        </view>
+        <view class="field">
+          <text>FDCAN 至少</text>
+          <input type="number" data-field="fdcan" value="{{rec.fdcan}}" bindinput="onRecInput" placeholder="例如 1"/>
+        </view>
+        <view class="field">
+          <text>缺字段策略</text>
+          <picker range="{{policies}}" range-key="label" value="{{policyIndex}}" bindchange="onPolicyChange">
+            <view class="picker">{{policies[policyIndex].label}}</view>
+          </picker>
+        </view>
+      </view>
+      <button class="submit" loading="{{loading}}" bindtap="onRecommendSubmit">给出短名单</button>
+    </view>
+
+    <view wx:if="{{mode === 'competitor'}}" class="panel">
+      <view class="panel-head">竞品对照</view>
+      <view class="grid">
+        <view class="field">
+          <text>厂商</text>
+          <input data-field="manufacturer" value="{{cmp.manufacturer}}" bindinput="onCmpInput" placeholder="例如 NXP"/>
+        </view>
+        <view class="field">
+          <text>竞品订货号</text>
+          <input data-field="part_number" value="{{cmp.part_number}}" bindinput="onCmpInput"/>
+        </view>
+        <view class="field span">
+          <text>规格来源（datasheet 链接、版本或页码）</text>
+          <input data-field="source_note" value="{{cmp.source_note}}" bindinput="onCmpInput" placeholder="必须填写已核实来源"/>
+        </view>
+        <view class="field">
+          <text>主频 (MHz)</text>
+          <input type="number" data-field="frequency_mhz" value="{{cmp.frequency_mhz}}" bindinput="onCmpInput"/>
+        </view>
+        <view class="field">
+          <text>Flash (KB)</text>
+          <input type="number" data-field="flash_kb" value="{{cmp.flash_kb}}" bindinput="onCmpInput"/>
+        </view>
+        <view class="field">
+          <text>RAM (KB)</text>
+          <input type="number" data-field="ram_kb" value="{{cmp.ram_kb}}" bindinput="onCmpInput"/>
+        </view>
+        <view class="field">
+          <text>引脚数</text>
+          <input type="number" data-field="pin_count" value="{{cmp.pin_count}}" bindinput="onCmpInput"/>
+        </view>
+        <view class="field">
+          <text>封装</text>
+          <picker range="{{packages}}" range-key="label" value="{{comparePackageIndex}}" bindchange="onComparePackageChange">
+            <view class="picker">{{packages[comparePackageIndex].label}}</view>
+          </picker>
+        </view>
+        <view class="field">
+          <text>FDCAN</text>
+          <input type="number" data-field="fdcan" value="{{cmp.fdcan}}" bindinput="onCmpInput"/>
+        </view>
+      </view>
+      <button class="submit" loading="{{loading}}" bindtap="onCompareSubmit">对照相近 STM32</button>
+    </view>
+
+    <view wx:if="{{mode === 'inspect'}}" class="panel">
+      <view class="panel-head">查看订货号</view>
+      <view class="grid">
+        <view class="field span">
+          <text>STM32 订货号</text>
+          <input value="{{inspectPart}}" bindinput="onInspectInput" placeholder="例如 STM32G474RET3"/>
+        </view>
+      </view>
+      <button class="submit" loading="{{loading}}" bindtap="onInspectSubmit">查看这颗料</button>
+    </view>
+
+    <view class="results">
+      <view wx:if="{{emptyText}}" class="meta">{{emptyText}}</view>
+      <view wx:for="{{cards}}" wx:key="partNumber" class="card">
+        <view class="card-head {{item.highlight ? 'top' : ''}}">
+          <text class="pn">{{item.rank}}. {{item.partNumber}}</text>
+          <text class="score">匹配度 {{item.score}} · {{item.status}}</text>
+        </view>
+        <view class="facts">
+          <text wx:for="{{item.facts}}" wx:for-item="chip" wx:key="key" class="chip">{{chip.text}}</text>
+        </view>
+        <view class="lists">
+          <view wx:if="{{item.matches.length}}">
+            <text class="list-title">依据</text>
+            <text wx:for="{{item.matches}}" wx:for-item="line" wx:key="*this" class="line">{{line}}</text>
+          </view>
+          <view wx:if="{{item.risks.length}}">
+            <text class="list-title">风险 / 缺口</text>
+            <text wx:for="{{item.risks}}" wx:for-item="line" wx:key="*this" class="line">{{line}}</text>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{inspectCard}}" class="card">
+        <view class="card-head top">
+          <text class="pn">{{inspectCard.partNumber}}</text>
+          <text class="score">{{inspectCard.status}}</text>
+        </view>
+        <view class="facts">
+          <text wx:for="{{inspectCard.facts}}" wx:for-item="chip" wx:key="key" class="chip">{{chip.text}}</text>
+        </view>
+        <view class="meta">{{inspectCard.description}}</view>
+      </view>
+      <view wx:if="{{meta}}" class="meta">{{meta}}</view>
+    </view>
+  </view>
+</view>

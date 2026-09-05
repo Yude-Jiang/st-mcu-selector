@@ -8,20 +8,23 @@ Status = Literal["starting", "ready", "error"]
 _lock = threading.Lock()
 _status: Status = "starting"
 _error: str | None = None
+_cache: dict[str, Any] = {}
 
 
-def mark_ready() -> None:
-    global _status, _error
+def mark_ready(cache: dict[str, Any] | None = None) -> None:
+    global _status, _error, _cache
     with _lock:
         _status = "ready"
         _error = None
+        _cache = dict(cache or {})
 
 
 def mark_error(exc: BaseException) -> None:
-    global _status, _error
+    global _status, _error, _cache
     with _lock:
         _status = "error"
         _error = str(exc)
+        _cache = {}
 
 
 def snapshot() -> dict[str, Any]:
@@ -29,6 +32,8 @@ def snapshot() -> dict[str, Any]:
         payload: dict[str, Any] = {"status": _status}
         if _error:
             payload["error"] = _error
+        if _cache:
+            payload["cache"] = dict(_cache)
         return payload
 
 

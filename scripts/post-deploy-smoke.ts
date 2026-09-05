@@ -33,15 +33,15 @@ async function checkHealthEndpoint(url: string): Promise<SmokeResult> {
   const healthUrl = `${url.replace(/\/$/, "")}/healthz`;
   try {
     const response = await fetch(healthUrl);
-    const ok = response.status === 200 || response.status === 404;
+    const ok = response.status === 200 || response.status === 503;
     return {
-      name: "Health endpoint check (optional)",
+      name: "Health endpoint check",
       ok,
-      details: `status=${response.status} (404 accepted if endpoint not implemented yet)`,
+      details: `status=${response.status} (503 accepted while MCU database is loading)`,
     };
   } catch (error) {
     return {
-      name: "Health endpoint check (optional)",
+      name: "Health endpoint check",
       ok: false,
       details: String(error),
     };

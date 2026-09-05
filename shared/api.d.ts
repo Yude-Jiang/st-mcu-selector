@@ -43,19 +43,59 @@ export interface ApiResponse<T> {
 }
 
 // ---------------------------------------------------------------------------
-// TODO: Project-specific types
+// MCU Selector — used by web/ and miniprogram/
 // ---------------------------------------------------------------------------
-// Add your domain entity types here. Examples:
-//
-// export type UserId = Brand<string, "UserId">;
-//
-// export interface User {
-//   id: UserId;
-//   email: string;
-//   createdAt: ISODateString;
-// }
-//
-// export interface CreateUserRequest {
-//   email: string;
-//   name: string;
-// }
+
+export type UnknownPolicy = "allow_risk" | "exclude";
+export type Application = "motor_control" | "power_conversion" | "bms" | "industrial_control" | "iot";
+export type NumericBound = { min?: number; max?: number };
+export type Constraint = number | boolean | string | string[] | NumericBound;
+
+export interface RecommendRequest {
+  must?: Record<string, Constraint>;
+  prefer?: Record<string, Constraint>;
+  application?: Application | null;
+  unknown_policy?: UnknownPolicy;
+  limit?: number;
+  include_inactive?: boolean;
+}
+
+export interface CompareRequest {
+  manufacturer: string;
+  part_number: string;
+  source_note: string;
+  specs: Record<string, number | boolean | string | string[]>;
+  essential?: string[];
+  weights?: Record<string, number>;
+  limit?: number;
+  include_inactive?: boolean;
+}
+
+export interface RecommendationItem {
+  part_number: string;
+  score: number;
+  status?: string;
+  facts?: Record<string, string | number>;
+  matches?: string[];
+  risks?: string[];
+  comparisons?: string[];
+}
+
+export interface RecommendResponse {
+  mode?: string;
+  recommendations: RecommendationItem[];
+  rejected_by_hard_constraints?: number;
+  disclaimer?: string;
+}
+
+export interface InspectResponse {
+  found: boolean;
+  part_number: string;
+  suggestions?: string[];
+  normalized?: Record<string, string | number>;
+  rpn?: {
+    marketingStatus?: string;
+    description?: string;
+  };
+  reference?: string;
+}

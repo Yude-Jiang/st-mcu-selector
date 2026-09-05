@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 
@@ -33,7 +35,10 @@ def api_health() -> JSONResponse:
         return JSONResponse(_not_ready_payload(), status_code=503)
     try:
         status = engine_adapter.database_status()
-        return JSONResponse({"status": "ok", **status})
+        payload: dict[str, Any] = {"status": "ok", **status}
+        if snap.get("cache"):
+            payload["cache"] = snap["cache"]
+        return JSONResponse(payload)
     except Exception as exc:
         return JSONResponse({"status": "error", "error": str(exc)}, status_code=503)
 

@@ -1,0 +1,9 @@
+{
+  "desc": "ST MCU Selector 不对外索引内部调试页",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}

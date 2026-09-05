@@ -1,0 +1,27 @@
+{
+  "miniprogramRoot": "miniprogram/",
+  "compileType": "miniprogram",
+  "appid": "touristappid",
+  "projectname": "st-mcu-selector",
+  "description": "ST MCU Selector 微信小程序，表单调阿里云 API",
+  "setting": {
+    "es6": true,
+    "minified": true,
+    "urlCheck": false,
+    "coverView": true,
+    "lazyloadPlaceholderEnable": false,
+    "preloadBackgroundData": false,
+    "autoAudits": false,
+    "useCompilerPlugins": false,
+    "showShadowRootInWxmlPanel": true
+  },
+  "simulatorType": "wechat",
+  "simulatorPluginLibVersion": {},
+  "packOptions": {
+    "ignore": [
+      { "type": "folder", "value": "server" },
+      { "type": "folder", "value": "data" },
+      { "type": "folder", "value": "web" }
+    ]
+  }
+}

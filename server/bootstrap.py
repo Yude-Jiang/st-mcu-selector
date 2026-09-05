@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -10,6 +9,12 @@ import uvicorn
 
 import engine_adapter
 import readiness
+
+if str(engine_adapter.ENGINE_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(engine_adapter.ENGINE_SCRIPTS))
+import db_cache
+
+DEFAULT_DB_URL = "https://sw-center.st.com/packs/cube-finder-db/cube-finder-db.zip"
 
 
 def configured_database() -> Path:
@@ -20,47 +25,27 @@ def configured_database() -> Path:
     return data_dir / "cube-finder-db.db"
 
 
-def ensure_database() -> Path:
+def ensure_database() -> db_cache.CacheResult:
     database = configured_database()
     mode = os.environ.get("ST_MCU_AUTO_UPDATE", "if_missing").strip().lower()
-    if mode not in {"never", "if_missing", "always"}:
-        raise ValueError("ST_MCU_AUTO_UPDATE must be never, if_missing, or always")
-    should_update = mode == "always" or (mode == "if_missing" and not database.is_file())
-    if should_update:
-        database.parent.mkdir(parents=True, exist_ok=True)
-        command = [
-            sys.executable,
-            str(engine_adapter.ENGINE_SCRIPTS / "update_database.py"),
-            "--output-dir",
-            str(database.parent),
-            "--url",
-            os.environ.get(
-                "ST_MCU_DB_URL",
-                "https://sw-center.st.com/packs/cube-finder-db/cube-finder-db.zip",
-            ),
-        ]
-        try:
-            subprocess.run(command, check=True)
-        except subprocess.CalledProcessError:
-            if not database.is_file():
-                raise
-            print(
-                "Database update failed; continuing with the existing validated database.",
-                file=sys.stderr,
-            )
-    if not database.is_file():
-        raise FileNotFoundError(
-            f"Database is missing: {database}. Enable ST_MCU_AUTO_UPDATE or mount a database file."
-        )
-    os.environ["ST_MCU_DB"] = str(database)
-    engine_adapter.validate_database(database)
-    return database
+    result = db_cache.ensure(
+        database,
+        url=os.environ.get("ST_MCU_DB_URL", DEFAULT_DB_URL),
+        mode=mode,
+    )
+    os.environ["ST_MCU_DB"] = str(result.database)
+    return result
 
 
 def _load_database() -> None:
     try:
-        ensure_database()
-        readiness.mark_ready()
+        result = ensure_database()
+        readiness.mark_ready(result.as_dict())
+        print(
+            "Database ready: "
+            f"source={result.source} stale={result.stale} fingerprint={result.fingerprint}",
+            flush=True,
+        )
     except Exception as exc:
         readiness.mark_error(exc)
         print(f"Database startup failed: {exc}", file=sys.stderr)

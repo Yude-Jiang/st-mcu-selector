@@ -1,0 +1,12 @@
+{
+  "pages": ["pages/index/index"],
+  "window": {
+    "navigationBarBackgroundColor": "#03234B",
+    "navigationBarTitleText": "ST MCU Selector",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#EEEFF1",
+    "backgroundTextStyle": "dark"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

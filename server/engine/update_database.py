@@ -132,6 +132,53 @@ def install_tree(staging: Path, output_dir: Path) -> None:
             atomic_copy(source, output_dir / source.relative_to(staging))
 
 
+def fingerprint(remote: dict) -> str:
+    etag = (remote.get("etag") or "").strip()
+    if etag:
+        return f"etag:{etag}"
+    last_modified = remote.get("last_modified") or ""
+    content_length = remote.get("content_length") or ""
+    if last_modified or content_length:
+        return f"meta:{last_modified}|{content_length}"
+    return ""
+
+
+def install_from_url(url: str, output_dir: Path, *, force: bool = False) -> dict:
+    output_dir = output_dir.resolve()
+    archive = output_dir / ARCHIVE_NAME
+    database = output_dir / DATABASE_NAME
+    state_path = output_dir / STATE_NAME
+    remote = metadata(url)
+    current = is_current(load_state(state_path), remote, archive, database)
+    if current and not force:
+        state = load_state(state_path)
+        return {**remote, **state, "skipped": True}
+    output_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="st-mcu-db-") as temp_name:
+        temp_dir = Path(temp_name)
+        temp_archive = temp_dir / ARCHIVE_NAME
+        staging = temp_dir / "extracted"
+        staging.mkdir()
+        download(url, temp_archive)
+        validate_and_extract(temp_archive, staging)
+        digest = sha256(temp_archive)
+        install_tree(staging, output_dir)
+        atomic_copy(temp_archive, archive)
+    state = {
+        **remote,
+        "sha256": digest,
+        "fingerprint": fingerprint(remote),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "skipped": False,
+    }
+    temp_state = output_dir / f"{STATE_NAME}.tmp"
+    temp_state.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(temp_state, state_path)
+    print(f"Database updated: {database}")
+    print(f"SHA-256: {digest}")
+    return state
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Update the ST MCU recommendation database")
     parser.add_argument("--url", default=DEFAULT_URL)
@@ -144,39 +191,21 @@ def main() -> int:
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
     output_dir = args.output_dir.resolve()
-    archive = output_dir / ARCHIVE_NAME
-    database = output_dir / DATABASE_NAME
-    state_path = output_dir / STATE_NAME
     try:
         remote = metadata(args.url)
-        current = is_current(load_state(state_path), remote, archive, database)
+        current = is_current(
+            load_state(output_dir / STATE_NAME),
+            remote,
+            output_dir / ARCHIVE_NAME,
+            output_dir / DATABASE_NAME,
+        )
         print(json.dumps({**remote, "local_current": current}, ensure_ascii=False, indent=2))
         if args.check_only:
             return 0
         if current and not args.force:
-            print(f"Database is current: {database}")
+            print(f"Database is current: {output_dir / DATABASE_NAME}")
             return 0
-        output_dir.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix="st-mcu-db-") as temp_name:
-            temp_dir = Path(temp_name)
-            temp_archive = temp_dir / ARCHIVE_NAME
-            staging = temp_dir / "extracted"
-            staging.mkdir()
-            download(args.url, temp_archive)
-            validate_and_extract(temp_archive, staging)
-            digest = sha256(temp_archive)
-            install_tree(staging, output_dir)
-            atomic_copy(temp_archive, archive)
-        state = {
-            **remote,
-            "sha256": digest,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }
-        temp_state = output_dir / f"{STATE_NAME}.tmp"
-        temp_state.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        os.replace(temp_state, state_path)
-        print(f"Database updated: {database}")
-        print(f"SHA-256: {digest}")
+        install_from_url(args.url, output_dir, force=args.force)
         return 0
     except (urllib.error.URLError, TimeoutError, OSError, RuntimeError, zipfile.BadZipFile) as exc:
         print(f"Update failed: {exc}", file=sys.stderr)

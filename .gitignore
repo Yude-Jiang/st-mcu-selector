@@ -8,3 +8,5 @@ __pycache__/
 .pytest_cache/
 .mcp.json
 .claude/
+project.private.config.json
+miniprogram/project.private.config.json
