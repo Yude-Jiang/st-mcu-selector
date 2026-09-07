@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 import engine_adapter
@@ -15,6 +15,7 @@ if str(ENGINE) not in sys.path:
     sys.path.insert(0, str(ENGINE))
 import nl_brief  # noqa: E402
 import nl_compare  # noqa: E402
+import nl_datasheet  # noqa: E402
 import nl_must  # noqa: E402
 import nl_turn  # noqa: E402
 
@@ -33,6 +34,14 @@ class CandidateIn(BaseModel):
     risks: list[str] = Field(default_factory=list)
 
 
+class DatasheetIn(BaseModel):
+    specs: dict[str, Any] = Field(default_factory=dict)
+    part_number: str = ""
+    manufacturer: str = ""
+    source_note: str = ""
+    notes: list[str] = Field(default_factory=list)
+
+
 class TurnBody(BaseModel):
     text: str = Field(min_length=2, max_length=500)
     must: dict[str, Any] = Field(default_factory=dict)
@@ -40,6 +49,7 @@ class TurnBody(BaseModel):
     unknown_policy: str = "allow_risk"
     candidates: list[CandidateIn] = Field(default_factory=list, max_length=3)
     history: list[str] = Field(default_factory=list, max_length=4)
+    datasheet: Optional[DatasheetIn] = None
 
 
 def _ready() -> None:
@@ -70,6 +80,22 @@ def parse_requirements(body: ParseBody) -> dict:
         raise HTTPException(status_code=502, detail="需求解析失败，请改填左侧表单。") from exc
 
 
+@router.post("/api/parse-datasheet")
+def parse_datasheet(file: Optional[UploadFile] = File(default=None)) -> dict:
+    if file is None:
+        raise HTTPException(status_code=400, detail="请上传 PDF 规格书或清晰截图。")
+    try:
+        data = file.file.read()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="无法读取上传文件。") from exc
+    try:
+        return nl_datasheet.parse_bytes(data, file.filename or "upload", file.content_type or "")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="规格书解析失败，请把主频、Flash、封装写进输入框。") from exc
+
+
 @router.post("/api/turn")
 def turn(body: TurnBody) -> dict:
     try:
@@ -80,6 +106,7 @@ def turn(body: TurnBody) -> dict:
             body.unknown_policy,
             [item.model_dump() for item in body.candidates],
             body.history,
+            body.datasheet.model_dump() if body.datasheet else None,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

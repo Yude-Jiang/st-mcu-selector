@@ -170,9 +170,12 @@ $("form-requirements").addEventListener("submit", async (event) => {
   const form = event.currentTarget;
   const text = ($("nl-text") && $("nl-text").value.trim()) || "";
   try {
-    if (text.length >= 4 && typeof askEngine === "function") {
-      await askEngine(text, { seed: true });
-      return;
+    if (text.length >= 4 || (typeof attachedDatasheetFile === "function" && attachedDatasheetFile())) {
+      const prompt = text.length >= 2 ? text : "对照上传的规格书";
+      if (typeof askEngine === "function") {
+        await askEngine(prompt, { seed: true });
+        return;
+      }
     }
     const data = new FormData(form);
     const payload = await postJson("/api/recommend", {

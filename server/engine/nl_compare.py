@@ -60,7 +60,18 @@ def looks_like_compare(text: str) -> bool:
     return bool(part and (similar or vendor)) or bool(vendor and similar)
 
 
-def parse_competitor(text: str) -> dict[str, Any]:
+def datasheet_ready(datasheet: dict[str, Any] | None) -> bool:
+    if not isinstance(datasheet, dict):
+        return False
+    specs = datasheet.get("specs")
+    return isinstance(specs, dict) and bool(sanitize_specs(specs))
+
+
+def parse_competitor(text: str, datasheet: dict[str, Any] | None = None) -> dict[str, Any]:
+    sheet = datasheet if isinstance(datasheet, dict) else {}
+    sheet_specs = sanitize_specs(sheet.get("specs") if isinstance(sheet.get("specs"), dict) else {})
+    if sheet_specs:
+        return _from_datasheet(text, sheet, sheet_specs)
     cleaned = " ".join(str(text or "").split())
     rules = nl_must.parse_with_rules(cleaned)
     specs = _specs_from_must(rules.get("must") or {})
@@ -192,6 +203,38 @@ def _source_note(text: str) -> str:
     if hit:
         return hit.group(0).strip()
     return ""
+
+
+def _from_datasheet(text: str, sheet: dict[str, Any], specs: dict[str, Any]) -> dict[str, Any]:
+    cleaned = " ".join(str(text or "").split())
+    raw_part = str(sheet.get("part_number") or "").strip()
+    if raw_part.upper().startswith("STM32"):
+        raise ValueError("规格书订货号不能是 STM32。请上传竞品 datasheet，或把竞品规格粘进输入框。")
+    part_number = raw_part.upper() if raw_part else _part_number(cleaned)
+    if part_number.startswith("STM32"):
+        raise ValueError("规格书订货号不能是 STM32。请上传竞品 datasheet，或把竞品规格粘进输入框。")
+    if not part_number:
+        part_number = "DATASHEET"
+    manufacturer = str(sheet.get("manufacturer") or "").strip()
+    if not manufacturer:
+        manufacturer = next(
+            (name for name, words in MANUFACTURERS if any(word in cleaned.lower() or word in text for word in words)),
+            "",
+        ) or "未注明厂商"
+    source_note = str(sheet.get("source_note") or "").strip()
+    if not source_note:
+        source_note = "规格来自用户上传的 datasheet 摘录（未保存文件）。"
+    notes = [str(item) for item in (sheet.get("notes") or []) if str(item).strip()]
+    return {
+        "manufacturer": manufacturer[:120],
+        "part_number": part_number[:120],
+        "source_note": source_note[:1000],
+        "specs": specs,
+        "essential": list(specs),
+        "limit": 3,
+        "notes": notes,
+        "recalled_specs": False,
+    }
 
 
 def _specs_from_must(must: dict[str, Any]) -> dict[str, Any]:

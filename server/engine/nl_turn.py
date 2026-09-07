@@ -35,6 +35,7 @@ def handle(
     unknown_policy: str,
     candidates: list[dict[str, Any]],
     history: list[str],
+    datasheet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cleaned = " ".join(str(text or "").split())
     if len(cleaned) < 2:
@@ -66,6 +67,8 @@ def handle(
         intent = "refine_must"
     if overlay and (overlay.get("competitor") or {}).get("part_number"):
         intent = "compare"
+    if nl_compare.datasheet_ready(datasheet) and intent not in {"refuse", "inspect"}:
+        intent = "compare"
     if intent == "refuse":
         return _payload(
             "refuse",
@@ -93,7 +96,7 @@ def handle(
         return result
     if intent == "compare":
         try:
-            draft = nl_compare.parse_competitor(cleaned)
+            draft = nl_compare.parse_competitor(cleaned, datasheet=datasheet)
         except ValueError:
             if current_must or series_prefix:
                 intent = "refine_must"

@@ -156,21 +156,24 @@ async function askEngine(text, options) {
     return;
   }
   const form = $("form-requirements");
-  setBanner("正在处理…", false);
-  const prior = session.history.slice();
-  session.history = prior.concat(cleaned).slice(-4);
   try {
+    const datasheet = typeof attachDatasheetIfAny === "function" ? await attachDatasheetIfAny() : null;
+    setBanner("正在处理…", false);
+    const prior = session.history.slice();
+    session.history = prior.concat(cleaned).slice(-4);
+    const body = {
+      text: cleaned,
+      must: collectMust(form),
+      application: form.elements.application.value || null,
+      unknown_policy: form.elements.unknown_policy.value || "allow_risk",
+      candidates: session.candidates,
+      history: prior,
+    };
+    if (datasheet) body.datasheet = datasheet;
     const response = await fetch("/api/turn", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        text: cleaned,
-        must: collectMust(form),
-        application: form.elements.application.value || null,
-        unknown_policy: form.elements.unknown_policy.value || "allow_risk",
-        candidates: session.candidates,
-        history: prior,
-      }),
+      body: JSON.stringify(body),
     });
     const payload = await parseResponse(response);
     if (payload.must) {

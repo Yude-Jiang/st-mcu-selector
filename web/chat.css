@@ -20,6 +20,49 @@
   display: none;
 }
 
+.file-box {
+  padding: 12px 16px 0;
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--st-gray-2);
+  background: var(--st-white);
+  color: var(--st-navy);
+  cursor: pointer;
+}
+
+.file-box.is-over .drop-zone {
+  border-color: var(--st-navy);
+  background: var(--st-yellow);
+  color: var(--st-navy);
+}
+
+.drop-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.drop-notes,
+.drop-file {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--st-slate);
+  line-height: 1.45;
+}
+
+.file-box.is-over .drop-notes,
+.file-box.is-over .drop-file {
+  color: var(--st-navy);
+}
+
+.drop-file {
+  font-weight: 700;
+}
+
 .page.has-results .form-grid {
   grid-template-columns: 1fr;
 }

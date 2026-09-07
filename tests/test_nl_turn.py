@@ -60,6 +60,26 @@ class NlTurnTests(unittest.TestCase):
         self.assertNotIn("MK64", result["answer"])
         self.assertNotIn("NXP", result["answer"])
 
+    def test_datasheet_forces_compare_without_recall(self) -> None:
+        result = nl_turn.handle(
+            "对照这颗",
+            {},
+            None,
+            "allow_risk",
+            [],
+            [],
+            datasheet={
+                "specs": {"frequency_mhz": 600, "flash_kb": 4096, "package_type": "BGA"},
+                "part_number": "GD32H779",
+                "manufacturer": "GigaDevice",
+                "source_note": "规格来自用户上传的 datasheet 摘录（shot.png，未保存文件）。",
+            },
+        )
+        self.assertEqual(result["intent"], "compare")
+        self.assertEqual(result["source"], "rules")
+        self.assertEqual(result["compare"]["part_number"], "GD32H779")
+        self.assertEqual(result["compare"]["specs"]["frequency_mhz"], 600)
+
 
 if __name__ == "__main__":
     unittest.main()

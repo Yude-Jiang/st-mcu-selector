@@ -3,3 +3,6 @@ uvicorn==0.34.2
 pydantic==2.11.4
 oss2==2.19.1
 google-cloud-storage==2.19.0
+pypdf==5.4.0
+python-multipart==0.0.20
+rapidocr-onnxruntime==1.4.4

@@ -120,5 +120,31 @@ class NlCompareTests(unittest.TestCase):
         self.assertEqual(result["compare"]["specs"]["frequency_mhz"], 600)
 
 
+    def test_datasheet_skips_competitor_recall(self) -> None:
+        with patch.object(nl_compare, "lookup_competitor_specs") as lookup:
+            draft = nl_compare.parse_competitor(
+                "对照这颗竞品",
+                datasheet={
+                    "specs": {"frequency_mhz": 120, "flash_kb": 1024, "package_type": "LQFP", "price": 3},
+                    "part_number": "MK64FN1M0VLL12",
+                    "manufacturer": "NXP",
+                    "source_note": "规格来自用户上传的 datasheet 摘录（mk64.pdf，未保存文件）。",
+                },
+            )
+        lookup.assert_not_called()
+        self.assertFalse(draft["recalled_specs"])
+        self.assertEqual(draft["part_number"], "MK64FN1M0VLL12")
+        self.assertEqual(draft["specs"]["frequency_mhz"], 120)
+        self.assertNotIn("price", draft["specs"])
+
+    def test_datasheet_without_part_uses_placeholder(self) -> None:
+        draft = nl_compare.parse_competitor(
+            "对照上传的规格书",
+            datasheet={"specs": {"flash_kb": 512, "package_type": "QFN"}},
+        )
+        self.assertEqual(draft["part_number"], "DATASHEET")
+        self.assertFalse(draft["recalled_specs"])
+
+
 if __name__ == "__main__":
     unittest.main()

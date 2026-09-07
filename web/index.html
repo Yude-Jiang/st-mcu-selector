@@ -53,6 +53,14 @@
           </label>
           <p class="nl-notes" id="nl-notes">点推荐后直接出候选。硬约束可在左侧改。不承诺价格和交期。</p>
         </div>
+        <div class="file-box" id="nl-drop">
+          <input id="nl-pdf" type="file" accept="application/pdf,.pdf,image/png,image/jpeg,image/webp,image/bmp,.png,.jpg,.jpeg,.webp,.bmp" hidden>
+          <label class="drop-zone" for="nl-pdf" id="nl-drop-label">
+            <span class="drop-title">可选上传竞品规格书 PDF 或截图；可拖拽到此处。</span>
+            <span class="drop-notes">电子版/清晰截图，8 MB 以内，文件不保存。扫描件或糊图抽不出字时，请把关键规格粘进输入框。</span>
+            <span class="drop-file" id="nl-file-name" hidden></span>
+          </label>
+        </div>
         <div class="actions"><button type="submit">推荐</button></div>
         <details id="must-panel" class="must-panel" open>
         <summary>硬约束（可改后再点推荐）</summary>
