@@ -7,7 +7,9 @@ import re
 from typing import Any
 
 import nl_brief
+import nl_contrast
 import nl_must
+import ui_copy
 
 COMPARE_HINTS = (
     "对照", "竞品", "对标", "替代", "替换",
@@ -15,7 +17,10 @@ COMPARE_HINTS = (
     "gigadevice", "nuvoton", "gd32", "mk64", "英飞凌",
     "瑞萨", "兆易", "新唐", "德州",
 )
-SIMILAR_HINTS = ("接近", "相当", "类似", "对标", "对照", "替换", "替代", "竞品")
+SIMILAR_HINTS = (
+    "接近", "相当", "类似", "对标", "对照", "替换", "替代", "竞品",
+    "close", "similar", "comparable", "equivalent", "replace", "replacement", "versus",
+)
 MANUFACTURERS = (
     ("NXP", ("nxp", "freescale", "飞思卡尔")),
     ("Infineon", ("infineon", "英飞凌", "cypress")),
@@ -44,12 +49,20 @@ SPEC_PROMPT = """你根据公开 MCU 资料回忆这颗竞品的规格，供 STM
   package_type 只能是 LQFP / QFN / BGA / WLCSP。数值用数字。不确定的键不要写。
 - notes: 字符串数组，说明规格来自模型回忆、须核对厂家 datasheet。
 """
-REASON_PROMPT = """根据竞品规格和 STM32 短名单 JSON，用中文说明为什么是这三颗。
+REASON_PROMPT = {
+    "zh": """根据竞品规格和 STM32 短名单 JSON，用中文说明为什么是这三颗。
 只输出 JSON：{"answer":"中文"}。
-answer 必须是 2～4 段，段与段空行：先写相对竞品的共同规格（内核、主频、存储器、封装），再写三颗之间的外设差别，再写风险（如温度）和须核对项。
-禁止提出 JSON 里没有的 STM32 订货号。禁止价格、交期、引脚兼容承诺。
+answer 必须是 2～4 段，段与段空行：先写相对竞品的共同规格（内核、主频、存储器、封装），用人话写出倍数（例如主频差约 2.4 倍），再写三颗之间的外设差别，再写点名应用时库内有没有电机定时器/HRTIM 等，再写风险（如温度）和须核对项。
+禁止提出 JSON 里没有的 STM32 订货号。禁止价格、交期、引脚兼容承诺。禁止编造 CoreMark、以太网或 JSON 没有的规格。
 提醒竞品规格若来自模型回忆，须核对厂家 datasheet。这是短名单不是设计签核。
-"""
+""",
+    "en": """From the competitor specs and the STM32 shortlist JSON, explain why these three parts.
+Output JSON only: {"answer":"English"}.
+Write answer in natural native US English, 2–4 short paragraphs separated by blank lines: shared specs versus the competitor (core, clock, memory, package) with human ratios from the JSON numbers (for example clock differs by about 2.4×), then peripheral differences among the three, then named-application library fields such as motor timers or HRTIM, then risks (temperature, for example) and datasheet checks.
+Do not name any STM32 orderable part that is not in the JSON. No price, lead-time, or pin-compatibility claims. Do not invent CoreMark, Ethernet, or any spec that is not in the JSON.
+If competitor specs were recalled by the model, say they must be checked on the vendor datasheet. This is a shortlist, not a design sign-off.
+""",
+}
 
 
 def looks_like_compare(text: str) -> bool:
@@ -140,11 +153,11 @@ EMPTY_COMPARE = (
 STM32_TOKEN = re.compile(r"STM32[A-Z0-9]+", re.I)
 
 
-def explain_compare(competitor: dict[str, Any], shortlist: dict[str, Any]) -> str:
+def explain_compare(competitor: dict[str, Any], shortlist: dict[str, Any], lang: str = "zh") -> str:
     items = shortlist.get("recommendations") or []
     if not items:
-        return EMPTY_COMPARE
-    fallback = _reason_from_cards(competitor, items)
+        return ui_copy.turn(lang)["empty_compare"]
+    fallback = _reason_from_cards(competitor, items, lang)
     if not nl_must.llm_configured():
         return fallback
     user = json.dumps(
@@ -154,7 +167,9 @@ def explain_compare(competitor: dict[str, Any], shortlist: dict[str, Any]) -> st
                 "part_number": competitor.get("part_number"),
                 "specs": competitor.get("specs"),
                 "source_note": competitor.get("source_note"),
+                "application": competitor.get("application"),
             },
+            "contrast": nl_contrast.contrast_lines(competitor, items, lang),
             "shortlist": [
                 {
                     "part_number": item.get("part_number"),
@@ -162,6 +177,7 @@ def explain_compare(competitor: dict[str, Any], shortlist: dict[str, Any]) -> st
                     "facts": item.get("facts") or {},
                     "comparisons": (item.get("comparisons") or [])[:8],
                     "penalties": (item.get("penalties") or [])[:6],
+                    "decision_note": item.get("decision_note"),
                 }
                 for item in items[:3]
             ],
@@ -169,13 +185,13 @@ def explain_compare(competitor: dict[str, Any], shortlist: dict[str, Any]) -> st
         ensure_ascii=False,
     )
     try:
-        raw = nl_must.complete_json(REASON_PROMPT, user, timeout=20) or {}
+        raw = nl_must.complete_json(REASON_PROMPT[ui_copy.normalize_lang(lang)], user, timeout=20) or {}
     except Exception:
         return fallback
     answer = str(raw.get("answer") or "").strip()
     if not answer or _invented_stm32(answer, items):
         return fallback
-    return answer
+    return nl_contrast.ensure_ratio_talk(answer, competitor, items, lang)
 
 
 def _invented_stm32(answer: str, items: list[dict[str, Any]]) -> bool:
@@ -206,8 +222,8 @@ def sanitize_specs(raw: dict[str, Any]) -> dict[str, Any]:
     return specs
 
 
-def _reason_from_cards(competitor: dict[str, Any], items: list[dict[str, Any]]) -> str:
-    return nl_brief.for_compare(competitor, items)
+def _reason_from_cards(competitor: dict[str, Any], items: list[dict[str, Any]], lang: str = "zh") -> str:
+    return nl_brief.for_compare(competitor, items, lang=lang)
 
 
 def _part_number(text: str) -> str:

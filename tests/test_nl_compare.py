@@ -159,6 +159,16 @@ class NlCompareTests(unittest.TestCase):
         self.assertNotIn("STM32H750", answer)
         self.assertIn("不能据此编造", answer)
 
+    def test_explain_compare_empty_english(self) -> None:
+        answer = nl_compare.explain_compare(
+            {"part_number": "GD32H779"},
+            {"recommendations": []},
+            lang="en",
+        )
+        self.assertNotIn("STM32H743", answer)
+        self.assertNotIn("短名单", answer)
+        self.assertIn("will not invent", answer)
+
     def test_explain_compare_drops_invented_h7(self) -> None:
         os.environ["DEEPSEEK_API_KEY"] = "test"
         try:

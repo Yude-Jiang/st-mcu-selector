@@ -80,6 +80,20 @@ class NlTurnTests(unittest.TestCase):
         self.assertEqual(result["compare"]["part_number"], "GD32H779")
         self.assertEqual(result["compare"]["specs"]["frequency_mhz"], 600)
 
+    def test_compare_sentence_keeps_motor_application(self) -> None:
+        result = nl_turn.handle(
+            "电机控制，对照 GD32H779，主频 600 MHz，Flash 4096 KB",
+            {},
+            None,
+            "allow_risk",
+            [],
+            [],
+        )
+        self.assertEqual(result["intent"], "compare")
+        self.assertEqual(result["application"], "motor_control")
+        self.assertEqual(result["compare"]["application"], "motor_control")
+        self.assertEqual(result["compare"]["specs"]["frequency_mhz"], 600)
+
 
 if __name__ == "__main__":
     unittest.main()

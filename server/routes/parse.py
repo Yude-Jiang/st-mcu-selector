@@ -50,6 +50,7 @@ class TurnBody(BaseModel):
     candidates: list[CandidateIn] = Field(default_factory=list, max_length=3)
     history: list[str] = Field(default_factory=list, max_length=4)
     datasheet: Optional[DatasheetIn] = None
+    lang: str = "zh"
 
 
 def _ready() -> None:
@@ -58,15 +59,24 @@ def _ready() -> None:
         raise HTTPException(status_code=503, detail=snap.get("error") or "器件库尚未就绪。")
 
 
-def _attach_shortlist(result: dict, shortlist: dict) -> dict:
+def _ui_lang(raw: str | None) -> str:
+    return "en" if str(raw or "").lower().startswith("en") else "zh"
+
+
+def _attach_shortlist(result: dict, shortlist: dict, lang: str = "zh") -> dict:
     result["recommendations"] = shortlist.get("recommendations") or []
     result["disclaimer"] = shortlist.get("disclaimer")
     result["rejected_by_hard_constraints"] = shortlist.get("rejected_by_hard_constraints")
     result["mode"] = shortlist.get("mode") or result.get("intent")
     if result.get("intent") == "compare" and result.get("compare"):
-        result["answer"] = nl_compare.explain_compare(result["compare"], shortlist)
+        result["answer"] = nl_compare.explain_compare(result["compare"], shortlist, lang=lang)
     else:
-        result["answer"] = nl_brief.for_shortlist(result["recommendations"])
+        result["answer"] = nl_brief.for_shortlist(
+            result["recommendations"],
+            lang=lang,
+            application=result.get("application"),
+            series_prefix=result.get("series_prefix"),
+        )
     return result
 
 
@@ -98,6 +108,7 @@ def parse_datasheet(file: Optional[UploadFile] = File(default=None)) -> dict:
 
 @router.post("/api/turn")
 def turn(body: TurnBody) -> dict:
+    lang = _ui_lang(body.lang)
     try:
         result = nl_turn.handle(
             body.text,
@@ -107,6 +118,7 @@ def turn(body: TurnBody) -> dict:
             [item.model_dump() for item in body.candidates],
             body.history,
             body.datasheet.model_dump() if body.datasheet else None,
+            lang,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -122,20 +134,21 @@ def turn(body: TurnBody) -> dict:
             shortlist = engine_adapter.compare(result["compare"])
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        return _attach_shortlist(result, shortlist)
+        return _attach_shortlist(result, shortlist, lang)
     if not result.get("rerecommend"):
         return result
     _ready()
     try:
-        shortlist = engine_adapter.recommend({
+            shortlist = engine_adapter.recommend({
             "must": result.get("must") or {},
             "application": result.get("application"),
             "unknown_policy": result.get("unknown_policy") or "allow_risk",
             "limit": 3,
             "series_prefix": result.get("series_prefix") or [],
+            "lang": lang,
         })
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    return _attach_shortlist(result, shortlist)
+    return _attach_shortlist(result, shortlist, lang)

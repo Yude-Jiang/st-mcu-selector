@@ -83,7 +83,7 @@ function showAttachedName(file) {
     return;
   }
   label.hidden = false;
-  label.textContent = file.name || "已选择文件";
+  label.textContent = file.name || t("drop.fileChosen");
 }
 
 function setAttachedFile(file) {
@@ -91,11 +91,11 @@ function setAttachedFile(file) {
   if (!input || !file) return;
   const kind = datasheetKind(file);
   if (!kind) {
-    setBanner("请上传 PDF 规格书或清晰截图（PNG / JPG / WebP）。", true);
+    setBanner(t("drop.needPdf"), true);
     return;
   }
   if (file.size > 8 * 1024 * 1024) {
-    setBanner("文件请控制在 8 MB 以内。", true);
+    setBanner(t("drop.tooLarge"), true);
     return;
   }
   const transfer = new DataTransfer();
@@ -109,7 +109,7 @@ async function attachDatasheetIfAny() {
   const file = attachedDatasheetFile();
   if (!file) return null;
   const kind = datasheetKind(file);
-  setBanner(kind === "image" ? "正在识别图片中的规格…" : "正在从规格书抽取规格…", false);
+  setBanner(kind === "image" ? t("drop.ocrImage") : t("drop.ocrPdf"), false);
   const body = new FormData();
   body.append("file", file);
   const response = await fetch("/api/parse-datasheet", { method: "POST", body });

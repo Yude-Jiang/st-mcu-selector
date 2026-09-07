@@ -2,6 +2,10 @@ function $(id) {
   return document.getElementById(id);
 }
 
+let lastHealth = null;
+let lastHealthOk = false;
+let lastHealthError = false;
+
 function showMode(mode) {
   document.querySelectorAll(".mode").forEach((button) => {
     const selected = button.dataset.mode === mode;
@@ -56,7 +60,7 @@ function collectMust(form) {
 async function parseResponse(response) {
   const payload = await response.json().catch(() => ({}));
   if (response.ok) return payload;
-  const detail = payload.detail || payload.error || `请求失败 (${response.status})`;
+  const detail = payload.detail || payload.error || t("requestFailed", { status: response.status });
   throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
 }
 
@@ -65,12 +69,6 @@ function escapeHtml(value) {
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
-}
-
-function factChips(facts) {
-  return factEntries(facts)
-    .map((item) => `<span>${escapeHtml(item.label)}: ${escapeHtml(item.value)}</span>`)
-    .join("");
 }
 
 function listBlock(title, items) {
@@ -112,51 +110,55 @@ function compareLeadHtml(payload) {
   const name = [competitor.manufacturer, competitor.part_number].filter(Boolean).join(" ");
   const specs = competitor.specs || {};
   const bits = [];
-  if (specs.frequency_mhz != null) bits.push(`主频 ${specs.frequency_mhz} MHz`);
-  if (specs.flash_kb != null) bits.push(`Flash ${specs.flash_kb} KB`);
-  if (specs.ram_kb != null) bits.push(`RAM ${specs.ram_kb} KB`);
-  if (specs.pin_count != null) bits.push(`${specs.pin_count} 引脚`);
+  if (specs.frequency_mhz != null) bits.push(t("compare.freq", { value: specs.frequency_mhz }));
+  if (specs.flash_kb != null) bits.push(t("compare.flash", { value: specs.flash_kb }));
+  if (specs.ram_kb != null) bits.push(t("compare.ram", { value: specs.ram_kb }));
+  if (specs.pin_count != null) bits.push(t("compare.pins", { value: specs.pin_count }));
   if (specs.package_type) bits.push(String(specs.package_type));
-  const specLine = bits.length ? `竞品规格：${bits.join("，")}。` : "";
-  return `<p class="compare-lead">对照 ${escapeHtml(name)}。${escapeHtml(specLine)} 下列订货号来自公开 MCU 数据库，不是模型编造。</p>`;
+  const specLine = bits.length ? t("compare.specs", { bits: bits.join(getLang() === "en" ? ", " : "，") }) : "";
+  return `<p class="compare-lead">${escapeHtml(t("compare.lead", { name, specs: specLine }))}</p>`;
 }
 
-function renderCards(payload) {
+function paintCards(payload) {
   const items = payload.recommendations || [];
   const mode = payload.mode === "competitor" ? "competitor" : "requirements";
-  const heading = mode === "competitor" ? "数据库短名单（含对照）" : "数据库短名单";
+  const heading = mode === "competitor" ? t("heading.shortlistCompare") : t("heading.shortlist");
   const lead = compareLeadHtml(payload);
+  const table = typeof compareTableHtml === "function" ? compareTableHtml(payload) : "";
   if (items.length === 0) {
-    const empty = mode === "competitor"
-      ? "数据库没有筛出可对照的 STM32 订货号。"
-      : "没有满足硬约束的候选。放宽硬约束后再试。";
-    $("results").innerHTML = `<h2 class="results-title">${heading}</h2>${lead}<p class="meta">${empty}</p>`;
+    const empty = mode === "competitor" ? t("empty.competitor") : t("empty.requirements");
+    $("results").innerHTML = `<h2 class="results-title">${heading}</h2>${lead}${table}<p class="meta">${empty}</p>`;
     return;
   }
   const cards = items.map((item, index) => {
     const view = shortlistModel(item, index, mode);
+    const scoreText = mode === "competitor"
+      ? t("score.closeness", { score: view.score })
+      : t("score", { score: view.score });
     return `
       <article class="card">
         <div class="card-head">
           <strong>${view.rank}. ${escapeHtml(view.partNumber)}</strong>
-          <span>匹配度 ${escapeHtml(view.score)}</span>
-          <a class="st-link" href="${escapeHtml(view.stUrl)}" target="_blank" rel="noopener noreferrer">ST 产品页</a>
+          <span>${escapeHtml(scoreText)}</span>
+          <a class="st-link" href="${escapeHtml(view.stUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("stProduct"))}</a>
         </div>
         <p class="status-banner is-${escapeHtml(view.status.kind)}">${escapeHtml(view.status.text)}</p>
+        ${view.decisionNote ? `<p class="decision">${escapeHtml(view.decisionNote)}</p>` : ""}
         <div class="facts">${view.facts.map((chip) => `<span>${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}</span>`).join("")}</div>
         <div class="lists">${listBlock(view.evidenceTitle, view.matchLines)}</div>
-        ${view.otherPackages.length ? `<p class="other-packages"><b>同系列还有这些封装</b><br>${view.otherPackages.map((line) => escapeHtml(line)).join("<br>")}</p>` : ""}
+        ${view.otherPackages.length ? `<p class="other-packages"><b>${escapeHtml(t("otherPackages"))}</b><br>${view.otherPackages.map((line) => escapeHtml(line)).join("<br>")}</p>` : ""}
       </article>`;
   });
   const rejected = payload.rejected_by_hard_constraints;
-  const extra = rejected === undefined ? "" : `硬约束剔除 ${rejected} 颗。`;
-  $("results").innerHTML = `<h2 class="results-title">${heading}</h2>${lead}${cards.join("")}<p class="meta">${escapeHtml(payload.disclaimer || "")} ${extra}</p>`;
+  const extra = rejected === undefined ? "" : t("rejected", { count: rejected });
+  $("results").innerHTML = `<h2 class="results-title">${heading}</h2>${lead}${table}${cards.join("")}<p class="meta">${escapeHtml(payload.disclaimer || "")} ${extra}</p>`;
 }
 
-function renderInspect(payload) {
+function paintInspect(payload) {
   if (!payload.found) {
-    const suggestions = (payload.suggestions || []).map((item) => escapeHtml(item)).join("、");
-    $("results").innerHTML = `<p class='meta'>未找到 ${escapeHtml(payload.part_number)}。${suggestions ? "相近订货号：" + suggestions : ""}</p>`;
+    const suggestions = (payload.suggestions || []).map((item) => escapeHtml(item)).join(getLang() === "en" ? ", " : "、");
+    const near = suggestions ? t("nearParts", { list: suggestions }) : "";
+    $("results").innerHTML = `<p class='meta'>${escapeHtml(t("notFound", { part: payload.part_number }))}${near}</p>`;
     return;
   }
   const view = inspectModel(payload);
@@ -164,7 +166,7 @@ function renderInspect(payload) {
     <article class="card inspect-card">
       <div class="card-head">
         <strong>${escapeHtml(view.partNumber)}</strong>
-        <a class="st-link" href="${escapeHtml(view.stUrl)}" target="_blank" rel="noopener noreferrer">在 st.com 查看</a>
+        <a class="st-link" href="${escapeHtml(view.stUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("stCom"))}</a>
       </div>
       <p class="status-banner is-${escapeHtml(view.status.kind)}">${escapeHtml(view.status.text)}</p>
       ${view.description ? `<p class="lead-copy">${escapeHtml(view.description)}</p>` : ""}
@@ -175,8 +177,16 @@ function renderInspect(payload) {
     </article>`;
 }
 
+function renderCards(payload) {
+  paintCards(payload);
+}
+
+function renderInspect(payload) {
+  paintInspect(payload);
+}
+
 async function postJson(url, body) {
-  setBanner("正在查询公开 MCU 数据库…", false);
+  setBanner(t("querying"), false);
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -191,7 +201,7 @@ $("form-requirements").addEventListener("submit", async (event) => {
   const text = ($("nl-text") && $("nl-text").value.trim()) || "";
   try {
     if (text.length >= 4 || (typeof attachedDatasheetFile === "function" && attachedDatasheetFile())) {
-      const prompt = text.length >= 2 ? text : "对照上传的规格书";
+      const prompt = text.length >= 2 ? text : t("uploadPrompt");
       if (typeof askEngine === "function") {
         await askEngine(prompt, { seed: true });
         return;
@@ -215,7 +225,7 @@ $("form-inspect").addEventListener("submit", async (event) => {
   event.preventDefault();
   const partNumber = new FormData(event.currentTarget).get("part_number");
   try {
-    setBanner("正在查询公开 MCU 数据库…", false);
+    setBanner(t("querying"), false);
     const response = await fetch(`/api/inspect?part_number=${encodeURIComponent(String(partNumber))}`);
     const payload = await parseResponse(response);
     setBanner("", false);
@@ -229,7 +239,6 @@ const tabs = document.querySelectorAll(".mode");
 tabs.forEach((button) => {
   button.addEventListener("click", () => {
     showMode(button.dataset.mode);
-    clearResults();
   });
 });
 document.querySelector(".modes").addEventListener("keydown", (event) => {
@@ -244,27 +253,41 @@ document.querySelector(".modes").addEventListener("keydown", (event) => {
   event.preventDefault();
   showMode(list[next].dataset.mode);
   list[next].focus();
-  clearResults();
 });
+
+function applyHealthCopy() {
+  const pill = $("db-status");
+  const notes = $("nl-notes");
+  if (!pill) return;
+  if (!lastHealth) {
+    pill.textContent = lastHealthError ? t("db.offline") : t("db.loading");
+    if (notes && notes.dataset.source !== "parse") notes.textContent = t("nl.notes");
+    return;
+  }
+  if (lastHealthOk) {
+    const count = lastHealth.counts && lastHealth.counts.cpn;
+    pill.textContent = count ? t("db.readyCount", { count }) : t("db.ready");
+  } else {
+    pill.textContent = lastHealth.error || t("db.notReady");
+  }
+  if (notes && notes.dataset.source !== "parse") {
+    notes.textContent = lastHealth.llm && lastHealth.llm.configured ? t("nl.notesLlm") : t("nl.notesRules");
+  }
+}
 
 async function refreshHealth() {
   try {
     const response = await fetch("/api/health");
     const payload = await response.json();
-    if (response.ok) {
-      const count = payload.counts && payload.counts.cpn ? payload.counts.cpn : "";
-      $("db-status").textContent = count ? `器件库就绪 · ${count} 个订货号` : "器件库就绪";
-    } else {
-      $("db-status").textContent = payload.error || "器件库未就绪";
-    }
-    const notes = $("nl-notes");
-    if (notes && payload.llm && notes.dataset.source !== "parse") {
-      notes.textContent = payload.llm.configured
-        ? "DeepSeek 会把这句话改成硬约束或竞品规格，点推荐后由数据库出候选。"
-        : "未配置 DeepSeek 时按关键词抽取。点推荐后由数据库出候选。";
-    }
+    lastHealth = payload;
+    lastHealthOk = response.ok;
+    lastHealthError = false;
+    applyHealthCopy();
   } catch (error) {
-    $("db-status").textContent = "无法连接选型服务";
+    lastHealth = null;
+    lastHealthOk = false;
+    lastHealthError = true;
+    applyHealthCopy();
   }
 }
 

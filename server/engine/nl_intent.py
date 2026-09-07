@@ -24,7 +24,11 @@ intent：非 STM32 料要对标/接近/替换 → compare；只查一颗 STM32 �
 """
 SERIES_STM32 = re.compile(r"(?<![A-Z0-9])STM32([A-Z][A-Z0-9]{0,6})(?![A-Z0-9])", re.I)
 SERIES_SHORT = re.compile(
-    r"(?:从|在)\s*([A-Z]\d)\s*(?:中|里|系列)?|(?:系列|里)\s*([A-Z]\d)\b|([A-Z]\d)\s*系列",
+    r"(?:从|在)\s*([A-Z]\d)\s*(?:中|里|系列)?"
+    r"|(?:系列|里)\s*([A-Z]\d)\b"
+    r"|([A-Z]\d)\s*系列"
+    r"|(?:from|in|within)\s+(?:the\s+)?([A-Z]\d)(?:\s+series)?"
+    r"|([A-Z]\d)\s+series",
     re.I,
 )
 CLARIFY = (
@@ -89,7 +93,7 @@ def sanitize(raw: dict[str, Any]) -> dict[str, Any]:
     intent = str(raw.get("intent") or "").strip()
     if intent not in {"recommend", "compare", "inspect", "explain", "refuse"}:
         intent = ""
-    clean = nl_must.sanitize_draft({"must": raw.get("must") if isinstance(raw.get("must"), dict) else {}})
+    clean = nl_must.sanitize_draft(raw)
     series_prefix: list[str] = []
     raw_series = raw.get("series_prefix") or []
     if isinstance(raw_series, str):

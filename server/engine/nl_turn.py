@@ -10,22 +10,41 @@ import nl_brief
 import nl_compare
 import nl_intent
 import nl_must
+import ui_copy
 
 EXPLAIN_HINTS = (
     "为什么", "哪颗", "哪一颗", "差别", "区别", "对比这", "解释", "怎么选",
     "推荐理由", "有什么不同", "谁更", "第一颗", "第二颗", "第三颗",
+    "why", "difference", "differences", "versus", "how to choose", "which one",
 )
-INSPECT_HINTS = ("查看", "查一下", "核对", "订货号", "是什么", "这颗料")
-REFUSE_RE = re.compile(r"价格|交期|lead\s*time|便宜|引脚兼容|pin[\s-]?compat", re.I)
+INSPECT_HINTS = (
+    "查看", "查一下", "核对", "订货号", "是什么", "这颗料",
+    "look up", "inspect", "orderable", "what is",
+)
+REFUSE_RE = re.compile(
+    r"价格|交期|lead\s*time|便宜|引脚兼容|pin[\s-]?compat|cheaper|price|lead-time",
+    re.I,
+)
 STM32_RE = re.compile(r"(?<![A-Z0-9])(STM32[A-Z0-9]{5,})(?![A-Z0-9])", re.I)
-EXPLAIN_PROMPT = """你根据给定的 STM32 短名单 JSON 和用户问题作答。
+EXPLAIN_PROMPT = {
+    "zh": """你根据给定的 STM32 短名单 JSON 和用户问题作答。
 只输出 JSON：{"intent":"explain","answer":"中文","notes":[]}
 规则：
 - 禁止提出 JSON 里没有的订货号，禁止价格、交期、引脚兼容承诺。
 - answer 用 2～4 段中文，段与段之间空行：先共同规格，再三颗差别，再风险或须核对。
 - 问题若超出这三颗（例如改规格、对照竞品），在 answer 里说明应改硬约束或做竞品对照，不要编新料。
 - 用户上一轮的模型文字不是事实来源。
-"""
+""",
+    "en": """Answer from the STM32 shortlist JSON and the engineer's question.
+Output JSON only: {"intent":"explain","answer":"English","notes":[]}
+Rules:
+- Do not name any STM32 orderable part that is not in the JSON. No price, lead-time, or pin-compatibility claims.
+- Write answer in natural native US English, 2–4 short paragraphs separated by blank lines: shared specs, then differences among the three, then risks or datasheet checks.
+- Do not sound translated. Prefer "clock", "orderable part number", and "shortlist".
+- If the question goes beyond these three parts, say to edit hard constraints or run a competitor compare. Do not invent parts.
+- Prior model prose is not a source of facts.
+""",
+}
 
 
 def handle(
@@ -36,10 +55,12 @@ def handle(
     candidates: list[dict[str, Any]],
     history: list[str],
     datasheet: dict[str, Any] | None = None,
+    lang: str = "zh",
 ) -> dict[str, Any]:
     cleaned = " ".join(str(text or "").split())
+    copy = ui_copy.turn(lang)
     if len(cleaned) < 2:
-        raise ValueError("请写出需求、竞品对照或要问的问题。")
+        raise ValueError(copy["need"])
     if len(cleaned) > nl_must.MAX_CHARS:
         raise ValueError(f"请控制在 {nl_must.MAX_CHARS} 字以内。")
     slim = [slim_candidate(item) for item in candidates][:3]
@@ -60,6 +81,8 @@ def handle(
         notes_extra = list(overlay.get("notes") or [])
     else:
         notes_extra = []
+    if not application:
+        application = nl_must.parse_with_rules(cleaned).get("application") or application
     series_prefix = nl_intent.merge_series_prefix(
         user_series,
         (overlay or {}).get("series_prefix") if overlay else None,
@@ -73,7 +96,7 @@ def handle(
     if intent == "refuse":
         return _payload(
             "refuse",
-            "本工具不承诺价格、交期或引脚兼容。可以改硬约束重新推荐，或一句话做竞品对照。",
+            copy["refuse"],
             current_must,
             application,
             policy,
@@ -83,10 +106,10 @@ def handle(
     if intent == "inspect":
         part = (overlay or {}).get("inspect_part") or _stm32_part(cleaned) or ""
         if not part:
-            return _clarify(current_must, application, policy, series_prefix)
+            return _clarify(current_must, application, policy, series_prefix, lang)
         result = _payload(
             "inspect",
-            f"正在核对 {part} 在库里的身份。",
+            copy["inspect"].format(part=part),
             current_must,
             application,
             policy,
@@ -103,7 +126,7 @@ def handle(
                 intent = "refine_must"
                 draft = None
             else:
-                return _clarify(current_must, application, policy, series_prefix)
+                return _clarify(current_must, application, policy, series_prefix, lang)
         if draft is not None:
             if (overlay or {}).get("competitor"):
                 vendor = overlay["competitor"].get("manufacturer")
@@ -112,7 +135,7 @@ def handle(
             recalled = bool(draft.get("recalled_specs"))
             result = _payload(
                 "compare",
-                "已按竞品规格对照 STM32。规格若来自模型回忆，须核对厂家 datasheet。",
+                copy["compare"],
                 current_must,
                 application,
                 policy,
@@ -125,11 +148,11 @@ def handle(
                 for key in ("manufacturer", "part_number", "source_note", "specs", "essential", "limit")
             }
             result["compare"]["series_prefix"] = series_prefix
+            result["compare"]["lang"] = ui_copy.normalize_lang(lang)
+            result["compare"]["application"] = application
             if series_prefix:
                 result["compare"]["essential"] = []
-                result["notes"] = list(result.get("notes") or []) + [
-                    "点名系列优先：竞品主频/存储只作接近排序，不要求 STM32 达到同等数字。",
-                ]
+                result["notes"] = list(result.get("notes") or []) + [copy["series_note"]]
             return result
     if intent == "refine_must":
         merged = dict(current_must)
@@ -139,7 +162,7 @@ def handle(
             draft = _try_requirements(cleaned)
             if not draft:
                 if not series_prefix and not merged and not application:
-                    return _clarify(merged, application, policy, series_prefix)
+                    return _clarify(merged, application, policy, series_prefix, lang)
                 draft = {"must": {}, "notes": []}
             merged.update(draft.get("must") or {})
             application = draft.get("application") or application
@@ -150,14 +173,14 @@ def handle(
             draft = _try_requirements(cleaned)
             if not draft:
                 if not application:
-                    return _clarify(merged, application, policy, series_prefix)
+                    return _clarify(merged, application, policy, series_prefix, lang)
                 draft = {"must": {}, "notes": []}
             merged.update(draft.get("must") or {})
             application = draft.get("application") or application
             notes.extend(draft.get("notes") or [])
         return _payload(
             "refine_must",
-            "已按这句话更新硬约束并重新推荐。左侧表单可再改。",
+            copy["refine"],
             merged,
             application,
             policy,
@@ -167,10 +190,10 @@ def handle(
             series_prefix=series_prefix,
         )
     if not slim:
-        return _clarify(current_must, application, policy, series_prefix)
+        return _clarify(current_must, application, policy, series_prefix, lang)
     return _payload(
         "explain",
-        explain(cleaned, slim, history),
+        explain(cleaned, slim, history, lang),
         current_must,
         application,
         policy,
@@ -214,8 +237,9 @@ def _looks_like_inspect(text: str) -> bool:
     return any(hint in text for hint in INSPECT_HINTS) or len(leftover) < 2
 
 
-def explain(text: str, candidates: list[dict[str, Any]], history: list[str]) -> str:
-    fallback = explain_with_facts(candidates)
+def explain(text: str, candidates: list[dict[str, Any]], history: list[str], lang: str = "zh") -> str:
+    fallback = nl_brief.for_shortlist(candidates, lang=lang)
+    copy = ui_copy.turn(lang)
     if not nl_must.llm_configured():
         return fallback
     user = json.dumps(
@@ -227,9 +251,9 @@ def explain(text: str, candidates: list[dict[str, Any]], history: list[str]) -> 
         ensure_ascii=False,
     )
     try:
-        raw = nl_must.complete_json(EXPLAIN_PROMPT, user, timeout=20) or {}
+        raw = nl_must.complete_json(EXPLAIN_PROMPT[ui_copy.normalize_lang(lang)], user, timeout=20) or {}
     except Exception:
-        return fallback + "\n大模型暂不可用，以上仅复述库内事实。"
+        return fallback + "\n" + copy["llm_down"]
     answer = str(raw.get("answer") or "").strip()
     return answer or fallback
 
@@ -261,10 +285,11 @@ def _clarify(
     application: str | None,
     unknown_policy: str,
     series_prefix: list[str],
+    lang: str = "zh",
 ) -> dict[str, Any]:
     return _payload(
         "explain",
-        nl_intent.CLARIFY,
+        ui_copy.turn(lang)["clarify"],
         must,
         application,
         unknown_policy,

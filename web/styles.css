@@ -28,6 +28,78 @@ body {
   min-height: 100vh;
 }
 
+.gate {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--st-navy);
+  padding: 24px;
+}
+
+.gate[hidden] {
+  display: none;
+}
+
+.gate-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--st-white);
+  padding: 28px 24px 24px;
+}
+
+.gate-card .brand-logo {
+  filter: none;
+  margin-bottom: 16px;
+}
+
+.gate-lead,
+.gate-hint {
+  color: var(--st-slate);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+
+.gate-langs {
+  margin: 12px 0 16px;
+}
+
+.gate-card .field {
+  margin-bottom: 12px;
+}
+
+.gate-card input {
+  width: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  color: var(--st-navy);
+  border: 1px solid var(--st-gray-2);
+  min-height: 40px;
+  padding: 8px 10px;
+}
+
+.gate-card button[type="submit"] {
+  width: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  border: 0;
+  min-height: 40px;
+  background: var(--st-yellow);
+  color: var(--st-navy);
+  cursor: pointer;
+}
+
+.gate-error {
+  color: var(--st-navy);
+  background: var(--st-gray-1);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 10px;
+  margin: 0 0 12px;
+}
+
 .hero {
   position: relative;
   background: var(--st-navy);

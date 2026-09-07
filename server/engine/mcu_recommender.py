@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from shortlist import application_label, field_label, format_points, matches_series_prefix, pick_shortlist
+import app_fit
+import ui_copy
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -303,15 +305,16 @@ def text_matches(value: Any, choices: list[Any]) -> bool:
     return any(str(choice).lower() in haystack for choice in choices)
 
 
-def evaluate_constraint(field: str, value: Any, raw_constraint: Any) -> tuple[str, str]:
+def evaluate_constraint(field: str, value: Any, raw_constraint: Any, lang: str = "zh") -> tuple[str, str]:
     constraint = normalize_constraint(field, raw_constraint)
-    label = field_label(field)
+    copy = ui_copy.engine(lang)
+    label = field_label(field, lang)
     if value is None or value == "":
-        return "unknown", f"{label}：数据库无值"
+        return "unknown", copy["unknown_db"].format(label=label)
     if field in NUMERIC_FIELDS:
         number = numeric(value, allow_negative=field in {"temperature_min_c"})
         if number is None:
-            return "unknown", f"{label}：无法解析 {value!r}"
+            return "unknown", copy["unparsed"].format(label=label, value=repr(value))
         if "min" in constraint and number < float(constraint["min"]):
             return "fail", f"{label}={number:g} < {constraint['min']}"
         if "max" in constraint and number > float(constraint["max"]):
@@ -319,7 +322,7 @@ def evaluate_constraint(field: str, value: Any, raw_constraint: Any) -> tuple[st
         return "pass", f"{label}={number:g}"
     choices = constraint.get("any_of") or constraint.get("contains")
     if choices is not None and not text_matches(value, list(choices)):
-        return "fail", f"{label}={value!r} 不匹配 {choices}"
+        return "fail", copy["mismatch"].format(label=label, value=repr(value), choices=choices)
     if "equals" in constraint and str(value).lower() != str(constraint["equals"]).lower():
         return "fail", f"{label}={value!r} != {constraint['equals']!r}"
     return "pass", f"{label}={value}"
@@ -347,7 +350,7 @@ def compact_facts(fields: dict[str, Any]) -> dict[str, Any]:
         "core", "frequency_mhz", "flash_kb", "ram_kb", "package", "pin_count",
         "temperature_min_c", "temperature_max_c", "adc_channels", "opamps",
         "comparators", "motor_timers", "fdcan", "can", "usb", "ethernet",
-        "usb_types", "ethernet_speed_mbps", "hrtim", "timers",
+        "usb_types", "ethernet_speed_mbps", "hrtim", "timers", "security",
     )
     return {key: fields.get(key) for key in keys if fields.get(key) is not None}
 
@@ -359,10 +362,12 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
     must = request_data.get("must") or {}
     prefer = request_data.get("prefer") or {}
     unknown_policy = request_data.get("unknown_policy", "allow_risk")
+    lang = ui_copy.normalize_lang(request_data.get("lang"))
+    copy = ui_copy.engine(lang)
     profile = APPLICATION_PROFILES.get(str(request_data.get("application", "")).lower(), {})
     ranked: list[dict[str, Any]] = []
     rejected = 0
-    app_name = application_label(str(request_data.get("application") or ""))
+    app_name = application_label(str(request_data.get("application") or ""), lang)
 
     for candidate in candidates:
         fields = candidate["fields"]
@@ -380,10 +385,10 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
         if "active" not in status_lower:
             delta = 8.0 if "coming soon" in status_lower else 4.0
             score -= delta
-            risks.append(f"生命周期状态需确认：{candidate['status']}")
-            penalties.append(f"库内状态不是量产，匹配度减 {format_points(delta)}")
+            risks.append(copy["lifecycle"].format(status=candidate["status"]))
+            penalties.append(copy["not_active"].format(delta=format_points(delta)))
         for field, constraint in must.items():
-            status, detail = evaluate_constraint(field, fields.get(field), constraint)
+            status, detail = evaluate_constraint(field, fields.get(field), constraint, lang)
             if status == "fail":
                 failures.append(detail)
             elif status == "unknown":
@@ -392,31 +397,31 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
                 else:
                     risks.append(detail)
                     score -= 12.0
-                    penalties.append(f"{detail}，匹配度减 12")
+                    penalties.append(copy["score12"].format(detail=detail))
             else:
                 matches.append(detail)
                 extra = overqualification_penalty(field, fields.get(field), constraint)
                 if extra:
                     score -= extra
-                    penalties.append(f"{field_label(field)}明显高于需求，匹配度减 {format_points(extra)}")
+                    penalties.append(copy["over"].format(label=field_label(field, lang), delta=format_points(extra)))
         if failures:
             rejected += 1
             continue
 
         for field, constraint in prefer.items():
-            status, detail = evaluate_constraint(field, fields.get(field), constraint)
+            status, detail = evaluate_constraint(field, fields.get(field), constraint, lang)
             weight = float(DEFAULT_WEIGHTS.get(field, 1.0))
             if status == "pass":
-                matches.append(f"偏好满足：{detail}")
+                matches.append(copy["prefer_ok"].format(detail=detail))
             elif status == "unknown":
                 delta = 1.5 * weight
-                risks.append(f"偏好待确认：{detail}")
+                risks.append(copy["prefer_wait"].format(detail=detail))
                 score -= delta
-                penalties.append(f"偏好待确认：{detail}，匹配度减 {format_points(delta)}")
+                penalties.append(copy["prefer_wait_pen"].format(detail=detail, delta=format_points(delta)))
             else:
                 delta = 4.0 * weight
                 score -= delta
-                penalties.append(f"偏好未满足：{detail}，匹配度减 {format_points(delta)}")
+                penalties.append(copy["prefer_miss"].format(detail=detail, delta=format_points(delta)))
 
         for field, weight in profile.items():
             value = fields.get(field)
@@ -425,7 +430,7 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
                 delta = 2.0 * weight
                 score -= delta
                 penalties.append(
-                    f"应用「{app_name}」库中未见{field_label(field)}，匹配度减 {format_points(delta)}"
+                    copy["app_miss"].format(app=app_name, label=field_label(field, lang), delta=format_points(delta))
                 )
 
         ranked.append({
@@ -439,7 +444,8 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
 
     ranked.sort(key=lambda item: (-item["score"], item["part_number"]))
     limit = max(1, min(int(request_data.get("limit", 3)), 20))
-    diversified = pick_shortlist(ranked, limit)
+    diversified = pick_shortlist(ranked, limit, lang)
+    app_fit.annotate(diversified, request_data.get("application"), lang)
     return {
         "mode": "requirements",
         "database": str(database),
@@ -448,30 +454,33 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
         "candidate_count": len(candidates),
         "rejected_by_hard_constraints": rejected,
         "recommendations": diversified[:limit],
-        "disclaimer": "数据库筛选结果；PinMux、并发外设、精确模拟性能、认证、价格和供货需用最新官方资料确认。",
+        "disclaimer": copy["disclaimer_req"],
     }
 
 
-def similarity(field: str, candidate: Any, target: Any) -> tuple[float, str]:
-    label = field_label(field)
+def similarity(field: str, candidate: Any, target: Any, lang: str = "zh") -> tuple[float, str]:
+    copy = ui_copy.engine(lang)
+    label = field_label(field, lang)
     if candidate is None:
-        return 0.0, f"{label}：ST 数据缺失"
+        return 0.0, copy["st_missing"].format(label=label)
     if field in NUMERIC_FIELDS:
         actual = numeric(candidate, allow_negative=field == "temperature_min_c")
         wanted = numeric(target, allow_negative=field == "temperature_min_c")
         if actual is None or wanted is None:
-            return 0.0, f"{label}：无法比较"
+            return 0.0, copy["cant_compare"].format(label=label)
         scale = max(abs(wanted), 1.0)
         closeness = max(0.0, 1.0 - abs(actual - wanted) / scale)
-        return closeness, f"{label}：ST={actual:g}，竞品={wanted:g}"
+        return closeness, copy["vs"].format(label=label, st=f"{actual:g}", other=f"{wanted:g}")
     matched = text_matches(candidate, target if isinstance(target, list) else [target])
-    return (1.0 if matched else 0.0), f"{label}：ST={candidate}，竞品={target}"
+    return (1.0 if matched else 0.0), copy["vs"].format(label=label, st=candidate, other=target)
 
 
 def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
     specs = competitor.get("specs") or {}
     if not specs:
         raise ValueError("竞品 JSON 必须包含非空 specs 对象")
+    lang = ui_copy.normalize_lang(competitor.get("lang"))
+    copy = ui_copy.engine(lang)
     essential = set(competitor.get("essential") or [])
     custom_weights = competitor.get("weights") or {}
     with connect_readonly(database) as db:
@@ -494,10 +503,10 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
         for field, target in specs.items():
             value = fields.get(field)
             weight = float(custom_weights.get(field, DEFAULT_WEIGHTS.get(field, 1.0)))
-            closeness, detail = similarity(field, value, target)
+            closeness, detail = similarity(field, value, target, lang)
             if field in essential:
                 if value is None:
-                    failures.append(f"{field_label(field)}：ST 数据缺失")
+                    failures.append(copy["st_missing"].format(label=field_label(field, lang)))
                 elif field in NUMERIC_FIELDS and numeric(value, field == "temperature_min_c") is not None:
                     actual = numeric(value, field == "temperature_min_c")
                     wanted = numeric(target, field == "temperature_min_c")
@@ -517,15 +526,26 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
         if failures:
             continue
         score = 100.0 * weighted_score / total_weight if total_weight else 0.0
+        app_name = application_label(str(competitor.get("application") or ""), lang)
+        profile = APPLICATION_PROFILES.get(str(competitor.get("application") or "").lower(), {})
+        for field, weight in profile.items():
+            value = fields.get(field)
+            present = numeric(value) if field in NUMERIC_FIELDS else value
+            if present is None or present == 0 or present == "":
+                delta = 2.0 * weight
+                score -= delta
+                penalties.append(
+                    copy["app_miss"].format(app=app_name, label=field_label(field, lang), delta=format_points(delta))
+                )
         status_lower = candidate["status"].lower()
         if "active" not in status_lower:
             factor = 0.88 if "coming soon" in status_lower else 0.95
             score *= factor
-            risks.append(f"生命周期状态需确认：{candidate['status']}")
-            penalties.append(f"库内状态不是量产，相似度按 {int(factor * 100)}% 计")
+            risks.append(copy["lifecycle"].format(status=candidate["status"]))
+            penalties.append(copy["not_active_sim"].format(pct=int(factor * 100)))
         ranked.append({
             **{key: candidate[key] for key in ("part_number", "reference", "rpn", "status", "description")},
-            "score": round(score, 1),
+            "score": round(max(0.0, min(100.0, score)), 1),
             "facts": compact_facts(fields),
             "comparisons": comparisons,
             "risks": risks,
@@ -534,7 +554,8 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
 
     ranked.sort(key=lambda item: (-item["score"], item["part_number"]))
     limit = max(1, min(int(competitor.get("limit", 3)), 20))
-    diversified = pick_shortlist(ranked, limit)
+    diversified = pick_shortlist(ranked, limit, lang)
+    app_fit.annotate(diversified, competitor.get("application"), lang)
     return {
         "mode": "competitor",
         "database": str(database),
@@ -542,7 +563,7 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
         "competitor": competitor,
         "candidate_count": len(candidates),
         "recommendations": diversified[:limit],
-        "disclaimer": "相似度只基于已提供且可比较的规格；必须继续核对官方数据手册、封装引脚、生命周期和供货。",
+        "disclaimer": copy["disclaimer_cmp"],
     }
 
 

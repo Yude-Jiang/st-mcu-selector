@@ -15,31 +15,56 @@
   <link rel="stylesheet" href="./chat.css">
 </head>
 <body>
-  <div id="root">
+  <div id="gate" class="gate">
+    <div class="gate-card">
+      <img class="brand-logo" src="./st-logo.svg" width="94" height="51" alt="STMicroelectronics">
+      <h1 class="title-bar" id="gate-title">MCU Selector</h1>
+      <p class="gate-lead" id="gate-lead">ST 内部试用。请输入含 @st.com 的邮箱后进入选型页。</p>
+      <div class="langs gate-langs" role="tablist" aria-label="选择语言">
+        <button class="lang is-active" type="button" role="tab" data-lang="zh" aria-selected="true">中文</button>
+        <button class="lang" type="button" role="tab" data-lang="en" aria-selected="false">English</button>
+      </div>
+      <form id="gate-form">
+        <label class="field"><span>Email</span>
+          <input id="gate-email" type="email" autocomplete="email" required placeholder="name@st.com">
+        </label>
+        <p class="gate-error" id="gate-error" hidden></p>
+        <button type="submit" id="gate-submit">进入</button>
+      </form>
+      <p class="gate-hint" id="gate-hint">仅用于进入本页，不创建账号。</p>
+    </div>
+  </div>
+  <div id="root" hidden>
     <header class="hero">
       <div class="hero-accent" aria-hidden="true"></div>
       <div class="hero-inner">
         <div class="brand">
           <img class="brand-logo" src="./st-logo.svg" width="94" height="51" alt="STMicroelectronics">
           <h1 class="title-bar">MCU Selector</h1>
-          <p class="db-pill" id="db-status">器件库加载中</p>
+          <p class="db-pill" id="db-status" data-i18n="db.loading">器件库加载中</p>
         </div>
       </div>
       <p class="message-bar">
-        <span>数据库匹配只给候选；最多给出三个订货号。这是短名单，不是设计签核。封装引脚、外设并发、认证、价格和供货仍须核对当前 datasheet。</span>
+        <span data-i18n="messageBar">数据库匹配只给候选；最多给出三个订货号。这是短名单，不是设计签核。封装引脚、外设并发、认证、价格和供货仍须核对当前 datasheet。</span>
       </p>
     </header>
 
     <main class="page">
-      <div class="modes" role="tablist" aria-label="选择任务">
-        <button class="mode is-active" type="button" role="tab" id="tab-requirements" data-mode="requirements" aria-selected="true" aria-controls="form-requirements" tabindex="0">
-          <span class="mode-head">推荐</span>
-          <span class="mode-body">一句话需求或竞品对照，最多三颗候选</span>
-        </button>
-        <button class="mode" type="button" role="tab" id="tab-inspect" data-mode="inspect" aria-selected="false" aria-controls="form-inspect" tabindex="-1">
-          <span class="mode-head">查看订货号</span>
-          <span class="mode-body">核对其在库里是什么</span>
-        </button>
+      <div class="toolbar">
+        <div class="modes" role="tablist" aria-label="选择任务" data-i18n-aria="modes.aria">
+          <button class="mode is-active" type="button" role="tab" id="tab-requirements" data-mode="requirements" aria-selected="true" aria-controls="form-requirements" tabindex="0">
+            <span class="mode-head" data-i18n="tab.recommend.head">推荐</span>
+            <span class="mode-body" data-i18n="tab.recommend.body">一句话需求或竞品对照，最多三颗候选</span>
+          </button>
+          <button class="mode" type="button" role="tab" id="tab-inspect" data-mode="inspect" aria-selected="false" aria-controls="form-inspect" tabindex="-1">
+            <span class="mode-head" data-i18n="tab.inspect.head">查看订货号</span>
+            <span class="mode-body" data-i18n="tab.inspect.body">核对其在库里是什么</span>
+          </button>
+        </div>
+        <div class="langs" role="tablist" aria-label="选择语言" data-i18n-aria="lang.aria">
+          <button class="lang is-active" type="button" role="tab" data-lang="zh" aria-selected="true" tabindex="0">中文</button>
+          <button class="lang" type="button" role="tab" data-lang="en" aria-selected="false" tabindex="-1">English</button>
+        </div>
       </div>
 
       <p class="banner" id="banner"></p>
@@ -48,73 +73,73 @@
       <div class="workspace-ask">
       <form id="form-requirements" class="form-panel is-open" role="tabpanel" aria-labelledby="tab-requirements">
         <div class="nl-box">
-          <label class="field">用一句话描述
-            <textarea id="nl-text" maxlength="500" placeholder="例如：电机控制要 USB；有没有跟 GD32H779 性能接近的，最好从 H5 里找；替换某厂订货号；查看 STM32G474RET3。"></textarea>
+          <label class="field"><span data-i18n="nl.label">用一句话描述</span>
+            <textarea id="nl-text" maxlength="500" placeholder="例如：电机控制要 USB；有没有跟 GD32H779 性能接近的，最好从 H5 里找；替换某厂订货号；查看 STM32G474RET3。" data-i18n-placeholder="nl.placeholder"></textarea>
           </label>
           <p class="nl-notes" id="nl-notes">点推荐后直接出候选。硬约束可在左侧改。不承诺价格和交期。</p>
         </div>
         <div class="file-box" id="nl-drop">
           <input id="nl-pdf" type="file" accept="application/pdf,.pdf,image/png,image/jpeg,image/webp,image/bmp,.png,.jpg,.jpeg,.webp,.bmp" hidden>
           <label class="drop-zone" for="nl-pdf" id="nl-drop-label">
-            <span class="drop-title">可选上传竞品规格书 PDF 或截图；可拖拽到此处。</span>
-            <span class="drop-notes">电子版/清晰截图，8 MB 以内，文件不保存。扫描件或糊图抽不出字时，请把关键规格粘进输入框。</span>
+            <span class="drop-title" data-i18n="drop.title">可选上传竞品规格书 PDF 或截图；可拖拽到此处。</span>
+            <span class="drop-notes" data-i18n="drop.notes">电子版/清晰截图，8 MB 以内，文件不保存。扫描件或糊图抽不出字时，请把关键规格粘进输入框。</span>
             <span class="drop-file" id="nl-file-name" hidden></span>
           </label>
         </div>
-        <div class="actions"><button type="submit">推荐</button></div>
+        <div class="actions"><button type="submit" data-i18n="submit.recommend">推荐</button></div>
         <details id="must-panel" class="must-panel" open>
-        <summary>硬约束（可改后再点推荐）</summary>
+        <summary data-i18n="must.summary">硬约束（可改后再点推荐）</summary>
         <div class="form-grid">
-          <label class="field">应用
+          <label class="field"><span data-i18n="field.application">应用</span>
             <select name="application">
-              <option value="">不指定</option>
-              <option value="motor_control">电机控制</option>
-              <option value="power_conversion">电源变换</option>
-              <option value="bms">电池管理</option>
-              <option value="industrial_control">工业控制</option>
-              <option value="iot">物联网</option>
+              <option value="" data-i18n="opt.unspecified">不指定</option>
+              <option value="motor_control" data-i18n="opt.motor">电机控制</option>
+              <option value="power_conversion" data-i18n="opt.power">电源变换</option>
+              <option value="bms" data-i18n="opt.bms">电池管理</option>
+              <option value="industrial_control" data-i18n="opt.industrial">工业控制</option>
+              <option value="iot" data-i18n="opt.iot">物联网</option>
             </select>
           </label>
-          <label class="field">主频至少 (MHz)
-            <input name="frequency_mhz" type="number" min="1" placeholder="例如 170">
+          <label class="field"><span data-i18n="field.frequency">主频至少 (MHz)</span>
+            <input name="frequency_mhz" type="number" min="1" placeholder="例如 170" data-i18n-placeholder="ph.frequency">
           </label>
-          <label class="field">Flash 至少 (KB)
-            <input name="flash_kb" type="number" min="1" placeholder="例如 512">
+          <label class="field"><span data-i18n="field.flash">Flash 至少 (KB)</span>
+            <input name="flash_kb" type="number" min="1" placeholder="例如 512" data-i18n-placeholder="ph.flash">
           </label>
-          <label class="field">RAM 至少 (KB)
+          <label class="field"><span data-i18n="field.ram">RAM 至少 (KB)</span>
             <input name="ram_kb" type="number" min="1">
           </label>
-          <label class="field">引脚数不超过
-            <input name="pin_count" type="number" min="8" placeholder="例如 64">
+          <label class="field"><span data-i18n="field.pins">引脚数不超过</span>
+            <input name="pin_count" type="number" min="8" placeholder="例如 64" data-i18n-placeholder="ph.pins">
           </label>
-          <label class="field">封装
+          <label class="field"><span data-i18n="field.package">封装</span>
             <select name="package_type">
-              <option value="">不限制</option>
+              <option value="" data-i18n="opt.unlimited">不限制</option>
               <option value="LQFP">LQFP</option>
               <option value="QFN">QFN</option>
               <option value="BGA">BGA</option>
               <option value="WLCSP">WLCSP</option>
             </select>
           </label>
-          <label class="field">最高工作温度至少 (°C)
-            <input name="temperature_max_c" type="number" placeholder="例如 125">
+          <label class="field"><span data-i18n="field.tempMax">最高工作温度至少 (°C)</span>
+            <input name="temperature_max_c" type="number" placeholder="例如 125" data-i18n-placeholder="ph.temp">
           </label>
-          <label class="field">FDCAN 至少
-            <input name="fdcan" type="number" min="0" placeholder="例如 1">
+          <label class="field"><span data-i18n="field.fdcan">FDCAN 至少</span>
+            <input name="fdcan" type="number" min="0" placeholder="例如 1" data-i18n-placeholder="ph.min1">
           </label>
-          <label class="field">USB 至少
-            <input name="usb" type="number" min="0" placeholder="例如 1">
+          <label class="field"><span data-i18n="field.usb">USB 至少</span>
+            <input name="usb" type="number" min="0" placeholder="例如 1" data-i18n-placeholder="ph.min1">
           </label>
-          <label class="field">电机定时器至少
-            <input name="motor_timers" type="number" min="0" placeholder="例如 1">
+          <label class="field"><span data-i18n="field.motorTimers">电机定时器至少</span>
+            <input name="motor_timers" type="number" min="0" placeholder="例如 1" data-i18n-placeholder="ph.min1">
           </label>
-          <label class="field">HRTIM 至少
-            <input name="hrtim" type="number" min="0" placeholder="例如 1">
+          <label class="field"><span data-i18n="field.hrtim">HRTIM 至少</span>
+            <input name="hrtim" type="number" min="0" placeholder="例如 1" data-i18n-placeholder="ph.min1">
           </label>
-          <label class="field">缺字段策略
+          <label class="field"><span data-i18n="field.unknownPolicy">缺字段策略</span>
             <select name="unknown_policy">
-              <option value="allow_risk">保留并标出风险</option>
-              <option value="exclude">库中无证据则排除</option>
+              <option value="allow_risk" data-i18n="opt.allowRisk">保留并标出风险</option>
+              <option value="exclude" data-i18n="opt.exclude">库中无证据则排除</option>
             </select>
           </label>
         </div>
@@ -123,21 +148,21 @@
 
       <form id="form-inspect" class="form-panel" role="tabpanel" aria-labelledby="tab-inspect" hidden>
         <div class="form-grid">
-          <label class="field span-2">STM32 订货号
+          <label class="field span-2"><span data-i18n="inspect.label">STM32 订货号</span>
             <div class="suggest" id="inspect-suggest">
-              <input name="part_number" id="inspect-part" required minlength="3" placeholder="输入 STM32 开头的系列或订货号" autocomplete="off" aria-autocomplete="list" aria-controls="inspect-suggest-list">
+              <input name="part_number" id="inspect-part" required minlength="3" placeholder="输入 STM32 开头的系列或订货号" autocomplete="off" aria-autocomplete="list" aria-controls="inspect-suggest-list" data-i18n-placeholder="inspect.placeholder">
               <ul class="suggest-list" id="inspect-suggest-list" hidden role="listbox"></ul>
             </div>
           </label>
         </div>
-        <div class="actions"><button type="submit">查看这颗料</button></div>
+        <div class="actions"><button type="submit" data-i18n="inspect.submit">查看这颗料</button></div>
       </form>
 
       <div id="followup" class="followup" hidden>
-        <label class="field">还可以改需求或再问一句
-          <textarea id="followup-text" maxlength="500" placeholder="例如：再加 USB；相近料从 H5 里找；查看 STM32G474RET3。"></textarea>
+        <label class="field"><span data-i18n="followup.label">还可以改需求或再问一句</span>
+          <textarea id="followup-text" maxlength="500" placeholder="例如：再加 USB；相近料从 H5 里找；查看 STM32G474RET3。" data-i18n-placeholder="followup.placeholder"></textarea>
         </label>
-        <button type="button" id="followup-send">追问</button>
+        <button type="button" id="followup-send" data-i18n="followup.send">追问</button>
         <p class="nl-notes" id="followup-notes">不承诺价格和交期。硬约束可点上方再改。</p>
       </div>
       </div>
@@ -153,15 +178,21 @@
     </main>
 
     <footer>
-      <span>ST MCU Selector · 公开 MCU 数据库短名单</span>
+      <span data-i18n="footer.db">ST MCU Selector · 公开 MCU 数据库短名单</span>
       <span>created by: helon.chen@st.com; yude.jiang@st.com · <time id="footer-date"></time></span>
       <span>STMicroelectronics. All trademarks are the property of their respective owners.</span>
     </footer>
   </div>
+  <script src="./copy.js"></script>
+  <script src="./copy-extra.js"></script>
+  <script src="./i18n.js"></script>
+  <script src="./gate.js"></script>
   <script src="./facts.js"></script>
+  <script src="./compare-table.js"></script>
   <script src="./app.js"></script>
   <script src="./parse.js"></script>
   <script src="./turn.js"></script>
+  <script src="./panes.js"></script>
   <script src="./suggest.js"></script>
 </body>
 </html>

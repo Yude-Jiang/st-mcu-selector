@@ -1,3 +1,9 @@
+function suggestKind(kind) {
+  const raw = String(kind || "");
+  if (raw === "订货号" || raw === "orderable") return t("suggest.orderable");
+  return t("suggest.series");
+}
+
 function bindPartSuggest(input, list) {
   if (!input || !list) return;
   let timer = 0;
@@ -20,7 +26,7 @@ function bindPartSuggest(input, list) {
     list.innerHTML = items.map((item, index) => `
       <li role="option" data-index="${index}" class="${index === active ? "is-active" : ""}">
         <span class="suggest-value">${escapeHtml(item.value)}</span>
-        <span class="suggest-kind">${escapeHtml(item.kind)}</span>
+        <span class="suggest-kind">${escapeHtml(suggestKind(item.kind))}</span>
       </li>`).join("");
     list.hidden = false;
     input.setAttribute("aria-expanded", "true");

@@ -2,6 +2,8 @@ const session = {
   candidates: [],
   history: [],
   context: "",
+  view: "",
+  payload: null,
 };
 
 function slimCandidates(items) {
@@ -27,8 +29,8 @@ function briefTitle(payload) {
     || ($("followup-text") && $("followup-text").value.trim())
     || "";
   if (typed) return typed.length > 72 ? `${typed.slice(0, 70)}…` : typed;
-  if (payload && payload.mode === "competitor") return "竞品对照短名单";
-  return "分析结论";
+  if (payload && payload.mode === "competitor") return t("brief.compare");
+  return t("brief.analysis");
 }
 
 function fillParagraphs(node, text) {
@@ -42,9 +44,9 @@ function fallbackAnswer(payload) {
   const names = ((payload && payload.recommendations) || [])
     .map((item) => item.part_number)
     .filter(Boolean)
-    .join("、");
+    .join(getLang() === "en" ? ", " : "、");
   if (!names) return "";
-  return `当前短名单是 ${names}。规格见下方卡片。\n\n这是短名单，不是设计签核。封装引脚、外设并发、认证、价格和供货须核对当前 datasheet。`;
+  return t("fallback.shortlist", { names });
 }
 
 function showBrief(payload, title) {
@@ -76,13 +78,9 @@ function showFollowup(kind) {
   const box = $("followup-text");
   const notes = $("followup-notes");
   if (box) {
-    box.placeholder = kind === "inspect"
-      ? "例如：推荐 Flash 更大的；查看 STM32G474RET3；替换某厂订货号。"
-      : "例如：再加 USB；相近料从 H5 里找；替换某厂订货号。";
+    box.placeholder = kind === "inspect" ? t("followup.placeholderInspect") : t("followup.placeholder");
   }
-  if (notes) {
-    notes.textContent = "不承诺价格和交期。硬约束可点上方再改。";
-  }
+  if (notes) notes.textContent = t("followup.notes");
 }
 
 function resetWorkspace() {
@@ -106,6 +104,8 @@ function resetWorkspace() {
   session.candidates = [];
   session.history = [];
   session.context = "";
+  session.view = "";
+  session.payload = null;
 }
 
 function rememberShortlist(payload) {
@@ -114,8 +114,15 @@ function rememberShortlist(payload) {
   const panel = $("must-panel");
   if (panel) panel.open = false;
   session.candidates = slimCandidates(payload.recommendations || []);
+  session.view = "cards";
+  session.payload = payload;
   showFollowup("shortlist");
   showBrief(payload);
+}
+
+function paintCurrentResults() {
+  if (session.view === "cards" && session.payload) paintCards(session.payload);
+  else if (session.view === "inspect" && session.payload) paintInspect(session.payload);
 }
 
 const _clearResults = clearResults;
@@ -137,6 +144,8 @@ renderInspect = function renderInspectInPane(payload) {
   if (page) page.classList.add("has-results");
   const panel = $("must-panel");
   if (panel) panel.open = false;
+  session.view = "inspect";
+  session.payload = payload;
   session.candidates = payload && payload.found
     ? [{
         part_number: payload.part_number,
@@ -152,15 +161,16 @@ async function askEngine(text, options) {
   const cleaned = String(text || "").trim();
   const seed = Boolean(options && options.seed);
   if (cleaned.length < 2) {
-    setBanner("请先写一句需求、竞品对照或问题。", true);
+    setBanner(t("needPrompt"), true);
     return;
   }
   const form = $("form-requirements");
   try {
     const datasheet = typeof attachDatasheetIfAny === "function" ? await attachDatasheetIfAny() : null;
-    setBanner("正在处理…", false);
-    const prior = session.history.slice();
-    session.history = prior.concat(cleaned).slice(-4);
+    setBanner(t("processing"), false);
+    const replay = Boolean(options && options.replay);
+    const prior = replay ? session.history.slice(0, -1) : session.history.slice();
+    if (!replay) session.history = prior.concat(cleaned).slice(-4);
     const body = {
       text: cleaned,
       must: collectMust(form),
@@ -168,6 +178,7 @@ async function askEngine(text, options) {
       unknown_policy: form.elements.unknown_policy.value || "allow_risk",
       candidates: session.candidates,
       history: prior,
+      lang: getLang(),
     };
     if (datasheet) body.datasheet = datasheet;
     const response = await fetch("/api/turn", {
@@ -198,6 +209,22 @@ async function askEngine(text, options) {
   } catch (error) {
     setBanner(error.message, true);
   }
+}
+
+if (typeof onLangChange === "function") {
+  onLangChange(() => {
+    const mode = document.querySelector(".mode.is-active");
+    const current = mode && mode.dataset.mode;
+    if (current === "inspect") {
+      const part = $("inspect-part") && $("inspect-part").value.trim();
+      if (part && $("form-inspect") && typeof $("form-inspect").requestSubmit === "function") {
+        $("form-inspect").requestSubmit();
+      }
+      return;
+    }
+    const last = session.history[session.history.length - 1];
+    if (last) askEngine(last, { seed: true, replay: true });
+  });
 }
 
 const followupSend = $("followup-send");

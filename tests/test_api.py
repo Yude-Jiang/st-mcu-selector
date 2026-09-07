@@ -39,29 +39,57 @@ class SelectionApiTests(unittest.TestCase):
         self.assertIn("name=\"hrtim\"", response.text)
         self.assertIn("name=\"usb\"", response.text)
         facts = Path(ROOT / "web" / "facts.js").read_text(encoding="utf-8")
-        self.assertIn("即将供货", facts)
+        copy = Path(ROOT / "web" / "copy.js").read_text(encoding="utf-8")
+        i18n = Path(ROOT / "web" / "i18n.js").read_text(encoding="utf-8")
+        self.assertIn("即将供货", copy)
+        self.assertIn("Coming soon", copy)
         self.assertIn("st.com/en/microcontrollers-microprocessors", facts)
         self.assertIn("matchLines", facts)
         self.assertIn("SHORTLIST_KEYS", facts)
-        self.assertIn("与竞品对照", facts)
-        self.assertIn("数据库短名单", Path(ROOT / "web" / "app.js").read_text(encoding="utf-8"))
+        self.assertIn("与竞品对照", copy)
+        self.assertIn("Versus competitor", copy)
+        self.assertIn("数据库短名单", copy)
+        self.assertIn("Database shortlist", copy)
         self.assertIn("min-height: 168px", Path(ROOT / "web" / "chat.css").read_text(encoding="utf-8"))
         self.assertIn("class=\"title-bar\"", response.text)
         self.assertIn(">推荐<", response.text)
         self.assertIn("./suggest.js", response.text)
+        self.assertIn("./copy.js", response.text)
+        self.assertIn("./i18n.js", response.text)
         self.assertIn("inspect-suggest", response.text)
         self.assertIn("GD32H779", response.text)
         self.assertNotIn("替换 NXP MK64FN1M0VLL12", response.text)
         self.assertNotIn("填入下方表单", response.text)
         self.assertNotIn("给出短名单", response.text)
         self.assertNotIn("tab-competitor", response.text)
-        self.assertIn("ST 产品页", Path(ROOT / "web" / "app.js").read_text(encoding="utf-8"))
+        self.assertIn("ST 产品页", copy)
+        self.assertIn("ST product page", copy)
+        self.assertIn("st-mcu-lang", i18n)
+        self.assertIn("data-lang=\"zh\"", response.text)
+        self.assertIn("data-lang=\"en\"", response.text)
+        self.assertIn("class=\"langs\"", response.text)
+        self.assertIn("class=\"toolbar\"", response.text)
         self.assertIn("最多给出三个订货号。这是短名单，不是设计签核。", response.text)
         self.assertIn("数据库匹配只给候选；最多给出三个订货号", response.text)
         self.assertIn("helon.chen@st.com", response.text)
         self.assertIn("yude.jiang@st.com", response.text)
         self.assertIn("footer-date", response.text)
         self.assertIn("/api/recommend", Path(ROOT / "web" / "app.js").read_text(encoding="utf-8"))
+        self.assertNotIn("clearResults();", Path(ROOT / "web" / "app.js").read_text(encoding="utf-8"))
+        self.assertIn("./panes.js", response.text)
+        self.assertIn("snapshotPane", Path(ROOT / "web" / "panes.js").read_text(encoding="utf-8"))
+        self.assertIn('id="gate"', response.text)
+        self.assertIn("./gate.js", response.text)
+        self.assertIn("./compare-table.js", response.text)
+        self.assertIn("./copy-extra.js", response.text)
+        self.assertIn('id="root" hidden', response.text)
+        gate = Path(ROOT / "web" / "gate.js").read_text(encoding="utf-8")
+        self.assertIn("isStEmail", gate)
+        self.assertIn("@st.com", gate)
+        self.assertIn("sessionStorage", gate)
+        table = Path(ROOT / "web" / "compare-table.js").read_text(encoding="utf-8")
+        self.assertIn("compare-table", table)
+        self.assertIn("table.compHigher", table)
 
     def test_recommend_rejects_before_database_ready(self) -> None:
         readiness.mark_error(RuntimeError("器件库尚未就绪。"))
@@ -142,6 +170,32 @@ class SelectionApiTests(unittest.TestCase):
         self.assertEqual(payload["must"]["usb"], {"min": 1})
         self.assertEqual(payload["recommendations"][0]["part_number"], "STM32G474RET3")
         self.assertIn("STM32G474RET3", payload.get("answer") or "")
+
+    def test_turn_brief_follows_lang(self) -> None:
+        os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
+        os.environ.pop("DEEPSEEK_API_KEY", None)
+        os.environ.pop("ST_MCU_LLM_KEY", None)
+        readiness.mark_ready()
+        fake = {
+            "mode": "requirements",
+            "recommendations": [{"part_number": "STM32G474RET3", "score": 91, "facts": {}, "matches": [], "risks": []}],
+            "disclaimer": "check datasheet",
+        }
+        with patch("routes.parse.engine_adapter.recommend", return_value=fake):
+            response = self.client.post(
+                "/api/turn",
+                json={
+                    "text": "再加 USB",
+                    "must": {"flash_kb": {"min": 512}},
+                    "candidates": [{"part_number": "STM32G431RBT6", "facts": {}}],
+                    "lang": "en",
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        answer = response.json().get("answer") or ""
+        self.assertIn("STM32G474RET3", answer)
+        self.assertIn("shortlist", answer.lower())
+        self.assertNotIn("当前短名单", answer)
 
     def test_turn_compare_uses_competitor_sentence(self) -> None:
         os.environ.pop("VITE_DEEPSEEK_API_KEY", None)

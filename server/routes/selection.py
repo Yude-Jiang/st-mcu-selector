@@ -33,6 +33,8 @@ class CompareBody(BaseModel):
     weights: dict[str, float] = Field(default_factory=dict)
     limit: int = Field(default=3, ge=1, le=20)
     include_inactive: bool = False
+    application: Optional[Application] = None
+    lang: str = "zh"
 
 
 def _ensure_ready() -> None:

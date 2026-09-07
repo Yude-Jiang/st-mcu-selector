@@ -84,6 +84,12 @@ class ShortlistTests(unittest.TestCase):
         self.assertIn("竞品", detail)
         self.assertNotIn("competitor", detail)
 
+    def test_compare_copy_uses_english_when_asked(self) -> None:
+        closeness, detail = engine.similarity("flash_kb", 512, 512, "en")
+        self.assertEqual(closeness, 1.0)
+        self.assertIn("competitor", detail)
+        self.assertNotIn("竞品", detail)
+
     def test_h5_series_prefix_matches_h5_only(self) -> None:
         self.assertTrue(matches_series_prefix("STM32H563RIT6", "STM32H563RI", ["H5"]))
         self.assertTrue(matches_series_prefix("STM32H503CBT6", "STM32H503CB", ["STM32H5"]))

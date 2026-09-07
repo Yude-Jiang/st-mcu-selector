@@ -24,7 +24,11 @@ class NlIntentTests(unittest.TestCase):
         )
         self.assertEqual(nl_intent.merge_series_prefix([], ["H7"]), ["STM32H7"])
 
-    def test_extract_named_stm32_series(self) -> None:
+    def test_english_series_from_h5(self) -> None:
+        self.assertEqual(
+            nl_intent.extract_series_prefix("anything close to GD32H779, preferably in the H5 series"),
+            ["STM32H5"],
+        )
         self.assertEqual(nl_intent.extract_series_prefix("优先 STM32G4"), ["STM32G4"])
 
     def test_sanitize_drops_invented_st_part(self) -> None:
@@ -39,6 +43,16 @@ class NlIntentTests(unittest.TestCase):
         self.assertEqual(clean["series_prefix"], ["STM32H5"])
         self.assertEqual(clean["must"]["usb"], {"min": 1})
         self.assertNotIn("price", clean["must"])
+
+    def test_sanitize_keeps_named_application(self) -> None:
+        clean = nl_intent.sanitize({
+            "intent": "compare",
+            "application": "motor_control",
+            "competitor": {"manufacturer": "GigaDevice", "part_number": "GD32H779"},
+            "must": {},
+        })
+        self.assertEqual(clean["application"], "motor_control")
+        self.assertEqual(clean["competitor"]["part_number"], "GD32H779")
 
 
 if __name__ == "__main__":

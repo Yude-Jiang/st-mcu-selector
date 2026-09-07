@@ -4,60 +4,65 @@ from __future__ import annotations
 
 from typing import Any
 
-LABELS = {
-    "core": "内核",
-    "frequency_mhz": "主频",
-    "flash_kb": "Flash",
-    "ram_kb": "RAM",
-    "package": "封装",
-    "package_type": "封装类型",
-    "pin_count": "引脚",
-    "temperature_max_c": "最高工作温度",
-    "fdcan": "FDCAN",
-    "usb": "USB",
-    "ethernet": "Ethernet",
-    "motor_timers": "电机定时器",
-    "hrtim": "HRTIM",
-}
+import app_fit
+import nl_contrast
+import ui_copy
+
+SHARED_KEYS = (
+    "core", "frequency_mhz", "flash_kb", "ram_kb",
+    "package", "package_type", "pin_count", "motor_timers",
+)
+DIFF_KEYS = ("usb", "fdcan", "ethernet", "hrtim", "temperature_max_c")
+DISCLAIMER = ui_copy.BRIEF["zh"]["disclaimer"]
+LABELS = ui_copy.LABELS["zh"]
 UNITS = {
     "frequency_mhz": " MHz",
     "flash_kb": " KB",
     "ram_kb": " KB",
     "temperature_max_c": " °C",
 }
-SHARED_KEYS = (
-    "core", "frequency_mhz", "flash_kb", "ram_kb",
-    "package", "package_type", "pin_count", "motor_timers",
-)
-DIFF_KEYS = ("usb", "fdcan", "ethernet", "hrtim", "temperature_max_c")
-DISCLAIMER = "这是短名单，不是设计签核。封装引脚、外设并发、认证、价格和供货须核对当前 datasheet。"
 
 
-def for_shortlist(items: list[dict[str, Any]], competitor: dict[str, Any] | None = None) -> str:
+def for_shortlist(
+    items: list[dict[str, Any]],
+    competitor: dict[str, Any] | None = None,
+    lang: str = "zh",
+    application: str | None = None,
+    series_prefix: list[str] | None = None,
+) -> str:
+    copy = ui_copy.brief(lang)
     cards = [item for item in items if item.get("part_number")][:3]
     if not cards:
-        return "没有满足硬约束的候选。可改硬约束后再推荐。\n\n" + DISCLAIMER
-    names = "、".join(str(item["part_number"]) for item in cards)
+        return copy["empty"] + "\n\n" + copy["disclaimer"]
+    names = copy["list"].join(str(item["part_number"]) for item in cards)
+    application = application or (competitor or {}).get("application")
+    series_prefix = series_prefix or (competitor or {}).get("series_prefix")
     paras: list[str] = []
-    shared = _shared_bits(cards)
+    shared = _shared_bits(cards, lang)
     if competitor:
-        paras.append(_lead_compare(competitor, names, cards, shared))
+        paras.append(_lead_compare(competitor, names, cards, shared, lang))
+        gap = nl_contrast.series_gap_line(competitor, cards, series_prefix, lang)
+        if gap:
+            paras.append(gap)
     elif shared:
-        paras.append(f"当前短名单是 {names}。三颗共同规格：{'，'.join(shared)}。")
+        paras.append(copy["shared"].format(names=names, shared=copy["clause"].join(shared)))
     else:
-        paras.append(f"当前短名单是 {names}。规格见右侧卡片。")
-    diff = _diff_paragraph(cards)
+        paras.append(copy["cards"].format(names=names))
+    app_para = app_fit.brief_paragraph(application, lang)
+    if app_para:
+        paras.append(app_para)
+    diff = _diff_paragraph(cards, lang)
     if diff:
         paras.append(diff)
-    risk = _risk_paragraph(cards, competitor)
+    risk = _risk_paragraph(cards, competitor, lang)
     if risk:
         paras.append(risk)
-    paras.append(_closing(competitor))
+    paras.append(_closing(competitor, lang))
     return "\n\n".join(paras)
 
 
-def for_compare(competitor: dict[str, Any], items: list[dict[str, Any]]) -> str:
-    return for_shortlist(items, competitor)
+def for_compare(competitor: dict[str, Any], items: list[dict[str, Any]], lang: str = "zh") -> str:
+    return for_shortlist(items, competitor, lang=lang)
 
 
 def _fact(item: dict[str, Any], key: str) -> Any:
@@ -72,13 +77,7 @@ def _common(items: list[dict[str, Any]], key: str) -> Any:
     return values[0] if all(value == values[0] for value in values) else None
 
 
-def _fmt(key: str, value: Any) -> str:
-    label = LABELS.get(key, key)
-    unit = UNITS.get(key, "")
-    return f"{label} {value}{unit}"
-
-
-def _shared_bits(items: list[dict[str, Any]]) -> list[str]:
+def _shared_bits(items: list[dict[str, Any]], lang: str) -> list[str]:
     bits: list[str] = []
     seen_package = False
     for key in SHARED_KEYS:
@@ -89,7 +88,7 @@ def _shared_bits(items: list[dict[str, Any]]) -> list[str]:
             if seen_package:
                 continue
             seen_package = True
-        bits.append(_fmt(key, value))
+        bits.append(ui_copy.fmt(key, value, lang))
     return bits
 
 
@@ -98,13 +97,18 @@ def _lead_compare(
     names: str,
     cards: list[dict[str, Any]],
     shared: list[str],
+    lang: str,
 ) -> str:
+    copy = ui_copy.brief(lang)
+    labels = ui_copy.labels(lang)
     vendor = str(competitor.get("manufacturer") or "").strip()
-    part = str(competitor.get("part_number") or "竞品").strip()
+    part = str(competitor.get("part_number") or copy["competitor"]).strip()
     title = f"{vendor} {part}".strip()
     specs = competitor.get("specs") if isinstance(competitor.get("specs"), dict) else {}
-    contrasts: list[str] = []
+    contrasts = nl_contrast.contrast_lines(competitor, cards, lang)
     for key, unit in (("frequency_mhz", " MHz"), ("flash_kb", " KB"), ("ram_kb", " KB")):
+        if any(bit.startswith(labels[key]) for bit in contrasts):
+            continue
         st_value = _common(cards, key)
         other = specs.get(key)
         if st_value in (None, "", []) or other in (None, ""):
@@ -113,21 +117,23 @@ def _lead_compare(
             st_num, other_num = float(st_value), float(other)
         except (TypeError, ValueError):
             continue
-        label = LABELS[key]
+        label = labels[key]
         if st_num > other_num:
-            contrasts.append(f"{label} {st_value}{unit}，高于竞品的 {other}{unit}")
+            contrasts.append(copy["higher"].format(label=label, st=st_value, unit=unit, other=other))
         elif st_num < other_num:
-            contrasts.append(f"{label} {st_value}{unit}，低于竞品的 {other}{unit}")
+            contrasts.append(copy["lower"].format(label=label, st=st_value, unit=unit, other=other))
         else:
-            contrasts.append(f"{label} {st_value}{unit}，与竞品相同")
-    extra = [bit for bit in shared if not bit.startswith(("主频 ", "Flash ", "RAM "))]
-    body = "；".join(contrasts + extra)
+            contrasts.append(copy["same"].format(label=label, st=st_value, unit=unit, other=other))
+    skip = tuple(f"{labels[key]} " for key in ("frequency_mhz", "flash_kb", "ram_kb"))
+    extra = [bit for bit in shared if not bit.startswith(skip)]
+    body = copy["semi"].join(contrasts + extra)
     if body:
-        return f"对照 {title}，短名单是 {names}。{body}。"
-    return f"对照 {title}，短名单是 {names}。"
+        return copy["compare"].format(title=title, names=names, body=body)
+    return copy["compare_short"].format(title=title, names=names)
 
 
-def _diff_paragraph(cards: list[dict[str, Any]]) -> str:
+def _diff_paragraph(cards: list[dict[str, Any]], lang: str) -> str:
+    copy = ui_copy.brief(lang)
     chunks: list[str] = []
     for item in cards:
         extras: list[str] = []
@@ -137,15 +143,16 @@ def _diff_paragraph(cards: list[dict[str, Any]]) -> str:
             value = _fact(item, key)
             if value in (None, "", [], 0):
                 continue
-            extras.append(_fmt(key, value))
+            extras.append(ui_copy.fmt(key, value, lang))
         if extras:
-            chunks.append(f"{item['part_number']} 另有 {'、'.join(extras)}")
+            chunks.append(copy["extra"].format(part=item["part_number"], extras=copy["list"].join(extras)))
     if not chunks:
         return ""
-    return "三颗之间的差别：" + "；".join(chunks) + "。"
+    return copy["diff"].format(chunks=copy["semi"].join(chunks))
 
 
-def _risk_paragraph(cards: list[dict[str, Any]], competitor: dict[str, Any] | None) -> str:
+def _risk_paragraph(cards: list[dict[str, Any]], competitor: dict[str, Any] | None, lang: str) -> str:
+    copy = ui_copy.brief(lang)
     notes: list[str] = []
     specs = (competitor or {}).get("specs") if competitor else {}
     st_temp = _common(cards, "temperature_max_c")
@@ -153,20 +160,21 @@ def _risk_paragraph(cards: list[dict[str, Any]], competitor: dict[str, Any] | No
     if st_temp not in (None, "") and other_temp not in (None, ""):
         try:
             if float(st_temp) < float(other_temp):
-                notes.append(f"最高工作温度 {st_temp} °C，低于竞品的 {other_temp} °C")
+                notes.append(copy["temp"].format(st=st_temp, other=other_temp))
         except (TypeError, ValueError):
             pass
     for item in cards:
         for row in (item.get("risks") or [])[:2]:
             if row:
-                notes.append(f"{item.get('part_number')}：{row}")
+                notes.append(f"{item.get('part_number')}：{row}" if lang != "en" else f"{item.get('part_number')}: {row}")
     if not notes:
         return ""
-    return "须注意：" + "；".join(notes[:4]) + "。"
+    return copy["risk"].format(notes=copy["semi"].join(notes[:4]))
 
 
-def _closing(competitor: dict[str, Any] | None) -> str:
+def _closing(competitor: dict[str, Any] | None, lang: str) -> str:
+    copy = ui_copy.brief(lang)
     source = str((competitor or {}).get("source_note") or "").strip()
     if source:
-        return f"{source} {DISCLAIMER}"
-    return DISCLAIMER
+        return f"{source} {copy['disclaimer']}"
+    return copy["disclaimer"]

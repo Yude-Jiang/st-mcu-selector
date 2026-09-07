@@ -1,3 +1,59 @@
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+  align-items: stretch;
+  margin-bottom: 0;
+}
+
+.langs {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px;
+}
+
+.lang {
+  border: 0;
+  cursor: pointer;
+  background: var(--st-navy);
+  color: var(--st-white);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 0;
+  padding: 12px 14px;
+}
+
+.lang.is-active {
+  background: var(--st-yellow);
+  color: var(--st-navy);
+}
+
+.lang:focus-visible {
+  outline: 2px solid var(--st-yellow);
+  outline-offset: 2px;
+}
+
+.lang.is-active:focus-visible {
+  outline-color: var(--st-navy);
+}
+
+@media (hover: hover) {
+  .lang:hover:not(.is-active) {
+    background: var(--st-slate);
+  }
+}
+
+@media (max-width: 860px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .langs {
+    justify-self: end;
+  }
+}
+
 .must-panel {
   border-top: 1px solid var(--st-gray-2);
 }
@@ -89,6 +145,65 @@
   line-height: 1.55;
   padding: 12px 16px 16px;
   margin: 0 0 12px;
+}
+
+.app-banner,
+.decision {
+  background: var(--st-gray-1);
+  border-left: 4px solid var(--st-yellow);
+  color: var(--st-navy);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+}
+
+.compare-table-wrap {
+  background: var(--st-white);
+  margin: 0 0 16px;
+  overflow-x: auto;
+}
+
+.compare-table-title {
+  background: var(--st-navy);
+  color: var(--st-white);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 16px;
+}
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.compare-table th,
+.compare-table td {
+  border: 1px solid var(--st-gray-2);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  color: var(--st-navy);
+}
+
+.compare-table thead th {
+  background: var(--st-navy);
+  color: var(--st-white);
+  font-weight: 700;
+}
+
+.compare-table tbody th {
+  background: var(--st-gray-1);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.compare-table-note {
+  font-size: 12px;
+  color: var(--st-slate);
+  line-height: 1.45;
+  padding: 10px 16px 14px;
 }
 
 .brief {

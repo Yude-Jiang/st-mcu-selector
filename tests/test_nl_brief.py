@@ -55,8 +55,40 @@ class NlBriefTests(unittest.TestCase):
             }],
         )
         self.assertIn("MK64FN1M0VLL12", text)
-        self.assertIn("高于竞品的 120 MHz", text)
+        self.assertIn("短名单约高 1.2 倍", text)
         self.assertIn("低于竞品的 105 °C", text)
+
+    def test_compare_says_clock_gap_in_times(self) -> None:
+        text = nl_brief.for_compare(
+            {
+                "manufacturer": "GigaDevice",
+                "part_number": "GD32H779",
+                "specs": {"frequency_mhz": 600, "flash_kb": 4096},
+                "series_prefix": ["STM32H5"],
+                "application": "motor_control",
+            },
+            [{
+                "part_number": "STM32H523CEU6",
+                "facts": {"frequency_mhz": 250, "flash_kb": 512, "motor_timers": 1},
+            }],
+        )
+        self.assertIn("主频差约 2.4 倍", text)
+        self.assertIn("不是性能对等", text)
+        self.assertIn("电机控制", text)
+
+    def test_english_brief_uses_shortlist_wording(self) -> None:
+        text = nl_brief.for_shortlist(
+            [{
+                "part_number": "STM32C591VGT6",
+                "facts": {"core": "Arm Cortex-M33", "frequency_mhz": 144},
+            }],
+            lang="en",
+        )
+        self.assertIn("STM32C591VGT6", text)
+        self.assertIn("shortlist", text.lower())
+        self.assertIn("design sign-off", text)
+        self.assertNotIn("当前短名单", text)
+        self.assertNotIn("不是设计签核", text)
 
 
 if __name__ == "__main__":
