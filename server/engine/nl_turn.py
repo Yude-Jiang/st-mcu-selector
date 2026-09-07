@@ -6,6 +6,7 @@ import json
 import re
 from typing import Any
 
+import nl_brief
 import nl_compare
 import nl_must
 
@@ -20,6 +21,7 @@ EXPLAIN_PROMPT = """你根据给定的 STM32 短名单 JSON 和用户问题作�
 只输出 JSON：{"intent":"explain","answer":"中文","notes":[]}
 规则：
 - 禁止提出 JSON 里没有的订货号，禁止价格、交期、引脚兼容承诺。
+- answer 用 2～4 段中文，段与段之间空行：先共同规格，再三颗差别，再风险或须核对。
 - 问题若超出这三颗（例如改规格、对照竞品），在 answer 里说明应改硬约束或做竞品对照，不要编新料。
 - 用户上一轮的模型文字不是事实来源。
 """
@@ -155,27 +157,7 @@ def explain(text: str, candidates: list[dict[str, Any]], history: list[str]) -> 
 
 
 def explain_with_facts(candidates: list[dict[str, Any]]) -> str:
-    names = [str(item.get("part_number") or "") for item in candidates if item.get("part_number")]
-    lines = [f"当前短名单是 {'、'.join(names)}。以下只复述库内事实，不是设计签核。"]
-    for item in candidates:
-        part = item.get("part_number") or "未知订货号"
-        facts = item.get("facts") or {}
-        bits = []
-        for key, label in (
-            ("frequency_mhz", "主频"),
-            ("flash_kb", "Flash"),
-            ("ram_kb", "RAM"),
-            ("package", "封装"),
-            ("pin_count", "引脚"),
-            ("fdcan", "FDCAN"),
-            ("usb", "USB"),
-        ):
-            value = facts.get(key)
-            if value not in (None, "", []):
-                bits.append(f"{label} {value}")
-        lines.append(f"{part}：{'，'.join(bits) if bits else '库内规格见卡片。'}")
-    lines.append("也可改硬约束重新推荐，或一句话做竞品对照。")
-    return "\n".join(lines)
+    return nl_brief.for_shortlist(candidates)
 
 
 def slim_candidate(item: dict[str, Any]) -> dict[str, Any]:

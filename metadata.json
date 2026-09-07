@@ -4,7 +4,7 @@
   "requestFramePermissions": [],
   "majorCapabilities": [
     "ST Key Visual landing page",
-    "Three MCU selection usage modes",
-    "Cloud Run static hosting"
+    "Recommend and inspect STM32 shortlists",
+    "Cloud Run and Aliyun dual hosting"
   ]
 }

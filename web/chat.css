@@ -24,30 +24,59 @@
   grid-template-columns: 1fr;
 }
 
-.thread {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-  max-height: 280px;
-  overflow: auto;
+.brief {
+  background: var(--st-white);
+  margin-bottom: 16px;
 }
 
-.bubble {
-  padding: 10px 12px;
-  font-size: 13px;
-  line-height: 1.45;
-  white-space: pre-wrap;
-}
-
-.bubble.is-user {
+.brief-title {
   background: var(--st-navy);
   color: var(--st-white);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 12px 16px;
 }
 
-.bubble.is-assistant {
+.brief-body {
   background: var(--st-gray-1);
-  color: var(--st-navy);
+  padding: 16px 18px 18px;
+}
+
+.brief-body p,
+.turn-a p {
+  font-size: 14px;
+  line-height: 1.7;
+  margin-bottom: 12px;
+}
+
+.brief-body p:last-child,
+.turn-a p:last-child {
+  margin-bottom: 0;
+}
+
+.turns {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.turn {
+  background: var(--st-white);
+}
+
+.turn-q {
+  background: var(--st-navy);
+  color: var(--st-white);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 16px;
+}
+
+.turn-a {
+  background: var(--st-gray-1);
+  padding: 14px 18px 16px;
 }
 
 .followup {
@@ -56,20 +85,11 @@
   border-top: 4px solid var(--st-yellow);
 }
 
-.followup-label {
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 8px;
+.page.has-results .followup {
+  position: sticky;
+  bottom: 0;
 }
 
-.followup-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.followup-chips button,
 .followup > button {
   font-family: Arial, Helvetica, sans-serif;
   font-size: 13px;
@@ -78,14 +98,6 @@
   min-height: 36px;
   padding: 0 12px;
   cursor: pointer;
-}
-
-.followup-chips button {
-  background: var(--st-gray-1);
-  color: var(--st-navy);
-}
-
-.followup > button {
   background: var(--st-navy);
   color: var(--st-white);
   margin-top: 8px;

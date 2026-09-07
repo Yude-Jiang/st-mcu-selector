@@ -6,6 +6,7 @@ import json
 import re
 from typing import Any
 
+import nl_brief
 import nl_must
 
 COMPARE_HINTS = (
@@ -43,6 +44,7 @@ SPEC_PROMPT = """你根据公开 MCU 资料回忆这颗竞品的规格，供 STM
 """
 REASON_PROMPT = """根据竞品规格和 STM32 短名单 JSON，用中文说明为什么是这三颗。
 只输出 JSON：{"answer":"中文"}。
+answer 必须是 2～4 段，段与段空行：先写相对竞品的共同规格（内核、主频、存储器、封装），再写三颗之间的外设差别，再写风险（如温度）和须核对项。
 禁止提出 JSON 里没有的 STM32 订货号。禁止价格、交期、引脚兼容承诺。
 提醒竞品规格若来自模型回忆，须核对厂家 datasheet。这是短名单不是设计签核。
 """
@@ -165,18 +167,7 @@ def sanitize_specs(raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def _reason_from_cards(competitor: dict[str, Any], items: list[dict[str, Any]]) -> str:
-    part = competitor.get("part_number") or "竞品"
-    vendor = competitor.get("manufacturer") or ""
-    lines = [f"按 {vendor} {part} 的规格对照 STM32，最多三颗候选。这是短名单，不是设计签核。"]
-    if competitor.get("source_note"):
-        lines.append(str(competitor["source_note"]))
-    for item in items[:3]:
-        name = item.get("part_number") or "未知订货号"
-        score = item.get("score")
-        bits = (item.get("comparisons") or item.get("matches") or [])[:4]
-        extra = "；".join(str(row) for row in bits) if bits else "见卡片对照项"
-        lines.append(f"{name}（匹配度 {score}）：{extra}")
-    return "\n".join(lines)
+    return nl_brief.for_compare(competitor, items)
 
 
 def _part_number(text: str) -> str:

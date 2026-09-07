@@ -66,8 +66,8 @@ function main(): void {
 
 ## Quality Gates Snapshot
 - Lint: run \`npm run lint\`
-- Test: run \`npm run test\`
-- Coverage: run \`npm run coverage\`
+- Python tests: run \`python -m unittest discover -s tests -p "test_*.py"\`
+- Key Visual: run \`npm run test\`
 - Contract checks: run \`npm run contract:check\`
 
 ## Reliability Snapshot

@@ -54,6 +54,34 @@ class NlMustTests(unittest.TestCase):
         self.assertTrue(nl_must.llm_configured())
         self.assertEqual(nl_must.llm_api_key(), "test")
 
+    def test_i2c_is_not_a_temperature(self) -> None:
+        must = nl_must.parse_with_rules("电机控制，要 I2C 和 USB")["must"]
+        self.assertNotIn("temperature_max_c", must)
+        self.assertEqual(must.get("usb"), {"min": 1})
+
+    def test_stm32c_part_is_not_a_temperature(self) -> None:
+        must = nl_must.parse_with_rules("查看 STM32C011F6P6，LQFP")["must"]
+        self.assertNotIn("temperature_max_c", must)
+        self.assertEqual(must.get("package_type"), ["LQFP"])
+
+    def test_celsius_still_extracted(self) -> None:
+        self.assertEqual(
+            nl_must.parse_with_rules("工业级 105°C，LQFP64")["must"]["temperature_max_c"],
+            {"min": 105},
+        )
+        self.assertEqual(
+            nl_must.parse_with_rules("工作温度 105 度")["must"]["temperature_max_c"],
+            {"min": 105},
+        )
+        self.assertEqual(
+            nl_must.parse_with_rules("耐温 105C")["must"]["temperature_max_c"],
+            {"min": 105},
+        )
+        self.assertEqual(
+            nl_must.parse_with_rules("LQFP64 105C")["must"]["temperature_max_c"],
+            {"min": 105},
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -166,7 +166,7 @@ docs/aliyun/README.md — OSS 桶、SAE、微信合法域名
 python run.py
 
 # 测试
-python -m unittest tests.test_api tests.test_db_cache tests.test_nl_must tests.test_nl_turn
+python -m unittest discover -s tests -p "test_*.py"
 
 # Cloud Run — 见 docs/cloud-run/README.md
 # 阿里云 SAE — 域名整站绑定见 docs/aliyun/sae-bind-domain.md

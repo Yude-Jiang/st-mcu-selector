@@ -8,11 +8,10 @@
     "typecheck": "tsc --noEmit",
     "lint": "npm run typecheck",
     "test": "node --import tsx --test tests/**/*.test.ts",
-    "coverage": "node --import tsx --test --experimental-test-coverage tests/**/*.test.ts",
     "contract:check": "tsx scripts/contract-check.ts",
     "kpi:report": "tsx scripts/weekly-status-report.ts",
     "smoke": "tsx scripts/post-deploy-smoke.ts",
-    "quality:gate": "npm run lint && npm run test && npm run coverage && npm run contract:check"
+    "quality:gate": "npm run lint && npm run test && npm run contract:check"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

@@ -122,18 +122,22 @@
         <div class="actions"><button type="submit">查看这颗料</button></div>
       </form>
 
-      <section id="thread" class="thread" hidden></section>
       <div id="followup" class="followup" hidden>
-        <p class="followup-label">继续问</p>
-        <div class="followup-chips" id="followup-chips"></div>
-        <label class="field">追问
-          <textarea id="followup-text" maxlength="500" placeholder="用一句话继续查：问规格、推荐相近料、替换竞品，或再写一颗订货号。"></textarea>
+        <label class="field">还可以改需求或再问一句
+          <textarea id="followup-text" maxlength="500" placeholder="例如：再加 USB；推荐 Flash 更大的；查看 STM32G474RET3。"></textarea>
         </label>
-        <button type="button" id="followup-send">继续问</button>
-        <p class="nl-notes" id="followup-notes">可以接着查，不限于当前结果。不承诺价格和交期。</p>
+        <button type="button" id="followup-send">追问</button>
+        <p class="nl-notes" id="followup-notes">不承诺价格和交期。硬约束可点上方再改。</p>
       </div>
       </div>
-      <section id="results" class="results" aria-live="polite"></section>
+      <div class="workspace-read">
+        <article id="brief" class="brief" hidden>
+          <h2 class="brief-title" id="brief-title"></h2>
+          <div class="brief-body" id="brief-body"></div>
+        </article>
+        <section id="thread" class="turns" hidden></section>
+        <section id="results" class="results" aria-live="polite"></section>
+      </div>
       </div>
     </main>
 

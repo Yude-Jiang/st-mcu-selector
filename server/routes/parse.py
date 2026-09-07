@@ -13,9 +13,10 @@ import readiness
 ENGINE = Path(__file__).resolve().parents[1] / "engine"
 if str(ENGINE) not in sys.path:
     sys.path.insert(0, str(ENGINE))
+import nl_brief  # noqa: E402
+import nl_compare  # noqa: E402
 import nl_must  # noqa: E402
 import nl_turn  # noqa: E402
-import nl_compare  # noqa: E402
 
 router = APIRouter()
 
@@ -52,6 +53,10 @@ def _attach_shortlist(result: dict, shortlist: dict) -> dict:
     result["disclaimer"] = shortlist.get("disclaimer")
     result["rejected_by_hard_constraints"] = shortlist.get("rejected_by_hard_constraints")
     result["mode"] = shortlist.get("mode") or result.get("intent")
+    if result.get("intent") == "compare" and result.get("compare"):
+        result["answer"] = nl_compare.explain_compare(result["compare"], shortlist)
+    else:
+        result["answer"] = nl_brief.for_shortlist(result["recommendations"])
     return result
 
 
@@ -90,9 +95,7 @@ def turn(body: TurnBody) -> dict:
             shortlist = engine_adapter.compare(result["compare"])
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        attached = _attach_shortlist(result, shortlist)
-        attached["answer"] = nl_compare.explain_compare(result["compare"], shortlist)
-        return attached
+        return _attach_shortlist(result, shortlist)
     if not result.get("rerecommend"):
         return result
     _ready()

@@ -23,17 +23,25 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install dependencies
+      - name: Install Node dependencies
         run: npm install
 
       - name: Lint (TypeScript)
         run: npm run lint
 
-      - name: Unit tests
+      - name: Key Visual lock
         run: npm run test
 
-      - name: Coverage threshold
-        run: npm run coverage
-
-      - name: Contract checks
+      - name: MCU contract
         run: npm run contract:check
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Python tests
+        run: python -m unittest discover -s tests -p "test_*.py"

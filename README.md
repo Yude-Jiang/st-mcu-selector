@@ -24,7 +24,7 @@ python run.py
 ```
 
 ```bash
-python -m unittest tests.test_api tests.test_db_cache
+python -m unittest discover -s tests -p "test_*.py"
 ```
 
 未设缓存 bucket 时，首次启动从 `sw-center.st.com` 下载器件库到本地（可用 `ST_MCU_DATA_DIR`）。

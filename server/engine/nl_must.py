@@ -90,7 +90,7 @@ def parse_with_rules(text: str) -> dict[str, Any]:
     )
     if ram:
         must["ram_kb"] = {"min": ram}
-    temp = _first_number(r"(\d+(?:\.\d+)?)\s*(?:°\s*)?c|(\d+(?:\.\d+)?)度", text)
+    temp = _temperature_max_c(text)
     if temp:
         must["temperature_max_c"] = {"min": temp}
     package_hit = re.search(r"\b(lqfp|qfn|bga|wlcsp)\s*-?\s*(\d{2,3})?\b", lower)
@@ -198,6 +198,22 @@ def extract_json(text: str) -> dict[str, Any]:
     if not isinstance(parsed, dict):
         raise ValueError("模型未返回对象")
     return parsed
+
+
+def _temperature_max_c(text: str) -> float | None:
+    explicit = _first_number(
+        r"(\d+(?:\.\d+)?)\s*°\s*c|(\d+(?:\.\d+)?)\s*度|(\d+(?:\.\d+)?)\s*deg(?:ree)?s?\s*c",
+        text,
+    )
+    if explicit is not None:
+        return explicit
+    contextual = _first_number(
+        r"(?:工作温度|耐温|温度|ambient|\btemps?\b|\btemperature\b)[^\d]{0,16}(\d+(?:\.\d+)?)",
+        text,
+    )
+    if contextual is not None:
+        return contextual
+    return _first_number(r"(?<![A-Za-z])(\d+(?:\.\d+)?)\s*c\b", text)
 
 
 def _first_number(pattern: str, text: str) -> float | None:

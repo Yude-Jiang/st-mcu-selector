@@ -26,9 +26,12 @@ class SelectionApiTests(unittest.TestCase):
         self.assertIn("id=\"root\"", response.text)
         self.assertIn("./parse.js", response.text)
         self.assertIn("./turn.js", response.text)
-        self.assertIn("id=\"followup-chips\"", response.text)
+        self.assertIn("id=\"brief\"", response.text)
+        self.assertIn("id=\"followup\"", response.text)
+        self.assertNotIn("followup-chips", response.text)
         self.assertNotIn("为什么是这三颗", response.text)
-        self.assertIn("inspectChips", Path(ROOT / "web" / "turn.js").read_text(encoding="utf-8"))
+        self.assertNotIn("继续问", response.text)
+        self.assertIn("showBrief", Path(ROOT / "web" / "turn.js").read_text(encoding="utf-8"))
         self.assertIn("name=\"motor_timers\"", response.text)
         self.assertIn("name=\"hrtim\"", response.text)
         self.assertIn("name=\"usb\"", response.text)
@@ -128,6 +131,7 @@ class SelectionApiTests(unittest.TestCase):
         self.assertEqual(payload["intent"], "refine_must")
         self.assertEqual(payload["must"]["usb"], {"min": 1})
         self.assertEqual(payload["recommendations"][0]["part_number"], "STM32G474RET3")
+        self.assertIn("STM32G474RET3", payload.get("answer") or "")
 
     def test_turn_compare_uses_competitor_sentence(self) -> None:
         os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
@@ -150,6 +154,8 @@ class SelectionApiTests(unittest.TestCase):
         payload = response.json()
         self.assertEqual(payload["intent"], "compare")
         self.assertEqual(payload["recommendations"][0]["part_number"], "STM32F429ZIT6")
+        self.assertIn("STM32F429ZIT6", payload.get("answer") or "")
+        self.assertIn("MK64FN1M0VLL12", payload.get("answer") or "")
         mocked.assert_called_once()
         body = mocked.call_args[0][0]
         self.assertEqual(body["manufacturer"], "NXP")
