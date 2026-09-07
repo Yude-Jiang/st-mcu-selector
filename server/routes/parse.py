@@ -105,6 +105,7 @@ def turn(body: TurnBody) -> dict:
             "application": result.get("application"),
             "unknown_policy": result.get("unknown_policy") or "allow_risk",
             "limit": 3,
+            "series_prefix": result.get("series_prefix") or [],
         })
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

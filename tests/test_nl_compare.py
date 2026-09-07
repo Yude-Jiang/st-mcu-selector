@@ -73,6 +73,52 @@ class NlCompareTests(unittest.TestCase):
         self.assertTrue(draft["recalled_specs"])
         self.assertIn("frequency_mhz", draft["essential"])
 
+    def test_part_after_cjk_is_extracted(self) -> None:
+        self.assertEqual(nl_compare._part_number("有没有跟GD32H779 性能接近的MCU"), "GD32H779")
+        text = "有没有跟GD32H779 性能接近的MCU，最好是从H5中找"
+        self.assertTrue(nl_compare.looks_like_compare(text))
+        result = nl_turn.handle(text, {}, None, "allow_risk", [], [])
+        self.assertEqual(result["series_prefix"], ["STM32H5"])
+        self.assertEqual(result["intent"], "refine_must")
+        self.assertTrue(result["rerecommend"])
+        self.assertNotIn("MK64", result["answer"])
+
+    def test_any_vendor_compare_with_model_specs(self) -> None:
+        overlay = {
+            "intent": "compare",
+            "must": {},
+            "series_prefix": ["STM32H5"],
+            "competitor": {"manufacturer": "GigaDevice", "part_number": "GD32H779"},
+            "inspect_part": None,
+            "application": None,
+            "notes": [],
+            "source": "model",
+        }
+        recalled = {
+            "manufacturer": "GigaDevice",
+            "specs": {"frequency_mhz": 600, "flash_kb": 4096},
+            "notes": ["回忆规格"],
+        }
+        with patch.object(nl_turn.nl_intent, "from_model", return_value=overlay):
+            with patch.object(nl_must, "complete_json", return_value=recalled):
+                os.environ["DEEPSEEK_API_KEY"] = "test"
+                try:
+                    result = nl_turn.handle(
+                        "有没有跟GD32H779 性能接近的MCU，最好是从H5中找",
+                        {},
+                        None,
+                        "allow_risk",
+                        [],
+                        [],
+                    )
+                finally:
+                    os.environ.pop("DEEPSEEK_API_KEY", None)
+        self.assertEqual(result["intent"], "compare")
+        self.assertEqual(result["compare"]["part_number"], "GD32H779")
+        self.assertEqual(result["compare"]["manufacturer"], "GigaDevice")
+        self.assertEqual(result["compare"]["series_prefix"], ["STM32H5"])
+        self.assertEqual(result["compare"]["specs"]["frequency_mhz"], 600)
+
 
 if __name__ == "__main__":
     unittest.main()

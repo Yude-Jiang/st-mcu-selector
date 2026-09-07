@@ -10,10 +10,12 @@ import nl_brief
 import nl_must
 
 COMPARE_HINTS = (
-    "对照", "竞品", "对标", "替代", "替换", "nxp", "freescale", "infineon",
-    "renesas", "microchip", "gigadevice", "nuvoton", "gd32", "mk64", "英飞凌",
+    "对照", "竞品", "对标", "替代", "替换",
+    "nxp", "freescale", "infineon", "renesas", "microchip",
+    "gigadevice", "nuvoton", "gd32", "mk64", "英飞凌",
     "瑞萨", "兆易", "新唐", "德州",
 )
+SIMILAR_HINTS = ("接近", "相当", "类似", "对标", "对照", "替换", "替代", "竞品")
 MANUFACTURERS = (
     ("NXP", ("nxp", "freescale", "飞思卡尔")),
     ("Infineon", ("infineon", "英飞凌", "cypress")),
@@ -26,7 +28,7 @@ MANUFACTURERS = (
     ("MindMotion", ("mindmotion", "灵动")),
 )
 SKIP_PARTS = re.compile(r"^(STM32|FDCAN|HRTIM|USB|LQFP|QFN|BGA|WLCSP|FLASH|RAM)\d*$", re.I)
-PART_RE = re.compile(r"\b([A-Z]{1,8}\d[A-Z0-9\-]{3,})\b", re.I)
+PART_RE = re.compile(r"(?<![A-Z0-9])([A-Z]{1,8}\d[A-Z0-9\-]{3,})(?![A-Z0-9])", re.I)
 SOURCE_RE = re.compile(r"(来源|datasheet|数据手册|手册)\s*[:：]?\s*(.+)$", re.I)
 URL_RE = re.compile(r"https?://\S+", re.I)
 SPEC_KEYS = (
@@ -52,7 +54,10 @@ answer 必须是 2～4 段，段与段空行：先写相对竞品的共同规格
 
 def looks_like_compare(text: str) -> bool:
     lower = text.lower()
-    return any(hint in lower or hint in text for hint in COMPARE_HINTS)
+    part = _part_number(text)
+    similar = any(word in text for word in SIMILAR_HINTS)
+    vendor = any(hint in lower or hint in text for hint in COMPARE_HINTS)
+    return bool(part and (similar or vendor)) or bool(vendor and similar)
 
 
 def parse_competitor(text: str) -> dict[str, Any]:
@@ -71,7 +76,7 @@ def parse_competitor(text: str) -> dict[str, Any]:
     notes = list(rules.get("notes") or [])
     recalled = False
     if not part_number:
-        raise ValueError("请写出要替换的竞品订货号，例如：替换 NXP MK64FN1M0VLL12。")
+        raise ValueError("请写出要对标的竞品订货号，或改说需求规格、STM32 系列。")
     if not specs:
         recalled = True
         looked = lookup_competitor_specs(manufacturer, part_number)
@@ -86,7 +91,7 @@ def parse_competitor(text: str) -> dict[str, Any]:
     if not manufacturer:
         manufacturer = "未注明厂商"
     if not specs:
-        raise ValueError("未抽出竞品规格。请补主频、Flash 或封装，或配置 DeepSeek 后再只写订货号。")
+        raise ValueError("还缺竞品规格。请补主频、Flash 或封装。")
     essential = [key for key in specs if key in CORE_KEYS] if recalled else list(specs)
     return {
         "manufacturer": str(manufacturer)[:120],

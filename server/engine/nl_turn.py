@@ -8,6 +8,7 @@ from typing import Any
 
 import nl_brief
 import nl_compare
+import nl_intent
 import nl_must
 
 EXPLAIN_HINTS = (
@@ -16,7 +17,7 @@ EXPLAIN_HINTS = (
 )
 INSPECT_HINTS = ("查看", "查一下", "核对", "订货号", "是什么", "这颗料")
 REFUSE_RE = re.compile(r"价格|交期|lead\s*time|便宜|引脚兼容|pin[\s-]?compat", re.I)
-STM32_RE = re.compile(r"\b(STM32[A-Z0-9]{5,})\b", re.I)
+STM32_RE = re.compile(r"(?<![A-Z0-9])(STM32[A-Z0-9]{5,})(?![A-Z0-9])", re.I)
 EXPLAIN_PROMPT = """你根据给定的 STM32 短名单 JSON 和用户问题作答。
 只输出 JSON：{"intent":"explain","answer":"中文","notes":[]}
 规则：
@@ -43,7 +44,28 @@ def handle(
     slim = [slim_candidate(item) for item in candidates][:3]
     current_must = dict(must or {})
     policy = unknown_policy if unknown_policy in {"allow_risk", "exclude"} else "allow_risk"
+    series_prefix = nl_intent.extract_series_prefix(cleaned)
     intent = classify(cleaned, slim)
+    overlay = None
+    if intent != "refuse" and not (slim and intent == "explain"):
+        overlay = nl_intent.from_model(cleaned)
+    if overlay:
+        if overlay.get("intent"):
+            intent = overlay["intent"]
+        current_must = dict(current_must)
+        current_must.update(overlay.get("must") or {})
+        for token in overlay.get("series_prefix") or []:
+            if token not in series_prefix:
+                series_prefix.append(token)
+        if overlay.get("application"):
+            application = overlay["application"]
+        notes_extra = list(overlay.get("notes") or [])
+    else:
+        notes_extra = []
+    if overlay and overlay.get("intent") == "recommend":
+        intent = "refine_must"
+    if overlay and (overlay.get("competitor") or {}).get("part_number"):
+        intent = "compare"
     if intent == "refuse":
         return _payload(
             "refuse",
@@ -52,46 +74,91 @@ def handle(
             application,
             policy,
             "rules",
+            series_prefix=series_prefix,
         )
     if intent == "inspect":
-        part = _stm32_part(cleaned) or ""
-        result = _payload("inspect", f"正在核对 {part} 在库里的身份。", current_must, application, policy, "rules")
-        result["inspect_part"] = part
-        return result
-    if intent == "compare":
-        draft = nl_compare.parse_competitor(cleaned)
-        recalled = bool(draft.get("recalled_specs"))
+        part = (overlay or {}).get("inspect_part") or _stm32_part(cleaned) or ""
+        if not part:
+            return _clarify(current_must, application, policy, series_prefix)
         result = _payload(
-            "compare",
-            "已按竞品规格对照 STM32。规格若来自模型回忆，须核对厂家 datasheet。",
+            "inspect",
+            f"正在核对 {part} 在库里的身份。",
             current_must,
             application,
             policy,
-            "model" if recalled else "rules",
-            notes=list(draft.get("notes") or []),
+            "rules",
+            series_prefix=series_prefix,
         )
-        result["compare"] = {
-            key: draft[key]
-            for key in ("manufacturer", "part_number", "source_note", "specs", "essential", "limit")
-        }
+        result["inspect_part"] = part
         return result
+    if intent == "compare":
+        try:
+            draft = nl_compare.parse_competitor(cleaned)
+        except ValueError:
+            if current_must or series_prefix:
+                intent = "refine_must"
+                draft = None
+            else:
+                return _clarify(current_must, application, policy, series_prefix)
+        if draft is not None:
+            if (overlay or {}).get("competitor"):
+                vendor = overlay["competitor"].get("manufacturer")
+                if vendor:
+                    draft["manufacturer"] = vendor
+            recalled = bool(draft.get("recalled_specs"))
+            result = _payload(
+                "compare",
+                "已按竞品规格对照 STM32。规格若来自模型回忆，须核对厂家 datasheet。",
+                current_must,
+                application,
+                policy,
+                "model" if recalled else "rules",
+                notes=list(draft.get("notes") or []) + notes_extra,
+                series_prefix=series_prefix,
+            )
+            result["compare"] = {
+                key: draft[key]
+                for key in ("manufacturer", "part_number", "source_note", "specs", "essential", "limit")
+            }
+            result["compare"]["series_prefix"] = series_prefix
+            return result
     if intent == "refine_must":
-        draft = nl_must.parse_requirements(cleaned)
         merged = dict(current_must)
-        merged.update(draft.get("must") or {})
-        app = draft.get("application") or application
+        source = "model" if overlay else "rules"
+        notes = list(notes_extra)
+        if not overlay:
+            draft = _try_requirements(cleaned)
+            if not draft:
+                if not series_prefix and not merged and not application:
+                    return _clarify(merged, application, policy, series_prefix)
+                draft = {"must": {}, "notes": []}
+            merged.update(draft.get("must") or {})
+            application = draft.get("application") or application
+            policy = draft.get("unknown_policy") or policy
+            source = draft.get("source") or source
+            notes = list(draft.get("notes") or [])
+        elif not merged and not series_prefix:
+            draft = _try_requirements(cleaned)
+            if not draft:
+                if not application:
+                    return _clarify(merged, application, policy, series_prefix)
+                draft = {"must": {}, "notes": []}
+            merged.update(draft.get("must") or {})
+            application = draft.get("application") or application
+            notes.extend(draft.get("notes") or [])
         return _payload(
             "refine_must",
             "已按这句话更新硬约束并重新推荐。左侧表单可再改。",
             merged,
-            app,
-            draft.get("unknown_policy") or policy,
-            draft.get("source") or "rules",
-            notes=list(draft.get("notes") or []),
+            application,
+            policy,
+            source,
+            notes=notes,
             rerecommend=True,
+            series_prefix=series_prefix,
         )
     if not slim:
-        raise ValueError("请先写一句需求或竞品对照并点推荐，或在左侧改硬约束后推荐。")
+        return _clarify(current_must, application, policy, series_prefix)
     return _payload(
         "explain",
         explain(cleaned, slim, history),
@@ -99,6 +166,8 @@ def handle(
         application,
         policy,
         "model" if nl_must.llm_configured() else "rules",
+        notes=notes_extra,
+        series_prefix=series_prefix,
     )
 
 
@@ -171,6 +240,30 @@ def slim_candidate(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _try_requirements(text: str) -> dict[str, Any] | None:
+    try:
+        return nl_must.parse_requirements(text)
+    except ValueError:
+        return None
+
+
+def _clarify(
+    must: dict[str, Any],
+    application: str | None,
+    unknown_policy: str,
+    series_prefix: list[str],
+) -> dict[str, Any]:
+    return _payload(
+        "explain",
+        nl_intent.CLARIFY,
+        must,
+        application,
+        unknown_policy,
+        "rules",
+        series_prefix=series_prefix,
+    )
+
+
 def _payload(
     intent: str,
     answer: str,
@@ -180,6 +273,7 @@ def _payload(
     source: str,
     notes: list[str] | None = None,
     rerecommend: bool = False,
+    series_prefix: list[str] | None = None,
 ) -> dict[str, Any]:
     return {
         "intent": intent,
@@ -190,4 +284,5 @@ def _payload(
         "source": source,
         "notes": notes or [],
         "rerecommend": rerecommend,
+        "series_prefix": series_prefix or [],
     }

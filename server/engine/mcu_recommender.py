@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable
 
-from shortlist import application_label, field_label, format_points, pick_shortlist
+from shortlist import application_label, field_label, format_points, matches_series_prefix, pick_shortlist
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -366,6 +366,11 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
 
     for candidate in candidates:
         fields = candidate["fields"]
+        if not matches_series_prefix(
+            candidate["part_number"], candidate.get("rpn"), request_data.get("series_prefix")
+        ):
+            rejected += 1
+            continue
         score = 100.0
         matches: list[str] = []
         risks: list[str] = []
@@ -476,6 +481,10 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
 
     for candidate in candidates:
         fields = candidate["fields"]
+        if not matches_series_prefix(
+            candidate["part_number"], candidate.get("rpn"), competitor.get("series_prefix")
+        ):
+            continue
         failures: list[str] = []
         comparisons: list[str] = []
         risks: list[str] = []

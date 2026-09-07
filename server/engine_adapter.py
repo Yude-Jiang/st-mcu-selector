@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -78,6 +79,42 @@ def inspect_part(part_number: str, include_attributes: bool = False) -> dict[str
             keep = {"rpn", "marketingStatus", "description", "path"}
             result["rpn"] = {key: value for key, value in rpn.items() if key in keep}
     return result
+
+
+def suggest_parts(query: str, limit: int = 12) -> list[dict[str, str]]:
+    needle = re.sub(r"[^A-Za-z0-9]", "", query).upper()
+    if len(needle) < 2:
+        return []
+    cap = max(1, min(int(limit), 20))
+    like = f"{needle}%"
+    with engine.connect_readonly(database_path()) as connection:
+        rpns = connection.execute(
+            "SELECT rpn FROM rpn WHERE UPPER(rpn) LIKE ? ORDER BY LENGTH(rpn), rpn LIMIT ?",
+            (like, cap),
+        ).fetchall()
+        cpns = connection.execute(
+            "SELECT cpn FROM cpn WHERE UPPER(cpn) LIKE ? ORDER BY LENGTH(cpn), cpn LIMIT ?",
+            (like, cap),
+        ).fetchall()
+    items: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for row in rpns:
+        value = str(row[0] if not isinstance(row, sqlite3.Row) else row["rpn"])
+        key = value.upper()
+        if not value or key in seen:
+            continue
+        seen.add(key)
+        items.append({"value": value, "kind": "系列型号"})
+    for row in cpns:
+        value = str(row[0] if not isinstance(row, sqlite3.Row) else row["cpn"])
+        key = value.upper()
+        if not value or key in seen:
+            continue
+        seen.add(key)
+        items.append({"value": value, "kind": "订货号"})
+        if len(items) >= cap:
+            break
+    return items[:cap]
 
 
 def database_status() -> dict[str, Any]:

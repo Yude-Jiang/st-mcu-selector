@@ -128,3 +128,21 @@ def pick_shortlist(ranked: list[dict[str, Any]], limit: int) -> list[dict[str, A
     if series_diversify_enabled():
         return diversify_by_series(ranked, limit)
     return diversify_by_rpn(ranked, limit)
+
+
+def normalize_series_prefix(raw: str) -> str:
+    token = re.sub(r"[^A-Z0-9]", "", str(raw or "").upper())
+    if not token:
+        return ""
+    if not token.startswith("STM32"):
+        token = "STM32" + token
+    return token if len(token) >= 6 else ""
+
+
+def matches_series_prefix(part_number: str, rpn: str | None, prefixes: list[str] | None) -> bool:
+    wanted = [normalize_series_prefix(item) for item in (prefixes or [])]
+    wanted = [item for item in wanted if item]
+    if not wanted:
+        return True
+    hay = re.sub(r"[^A-Z0-9]", "", f"{part_number or ''}{rpn or ''}".upper())
+    return any(token in hay for token in wanted)

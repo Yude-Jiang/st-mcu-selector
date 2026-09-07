@@ -10,7 +10,7 @@ ENGINE = ROOT / "server" / "engine"
 sys.path.insert(0, str(ENGINE))
 os.chdir(ROOT)
 
-from shortlist import diversify_by_rpn, diversify_by_series, pick_shortlist, series_group  # noqa: E402
+from shortlist import diversify_by_rpn, diversify_by_series, matches_series_prefix, pick_shortlist, series_group  # noqa: E402
 import mcu_recommender as engine  # noqa: E402
 
 
@@ -83,6 +83,11 @@ class ShortlistTests(unittest.TestCase):
         self.assertIn("Flash", detail)
         self.assertIn("竞品", detail)
         self.assertNotIn("competitor", detail)
+
+    def test_h5_series_prefix_matches_h5_only(self) -> None:
+        self.assertTrue(matches_series_prefix("STM32H563RIT6", "STM32H563RI", ["H5"]))
+        self.assertTrue(matches_series_prefix("STM32H503CBT6", "STM32H503CB", ["STM32H5"]))
+        self.assertFalse(matches_series_prefix("STM32G474RET3", "STM32G474RE", ["STM32H5"]))
 
 
 def _item(part: str, rpn: str, package: str, pins: int) -> dict:

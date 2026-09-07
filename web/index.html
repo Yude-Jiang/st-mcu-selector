@@ -49,7 +49,7 @@
       <form id="form-requirements" class="form-panel is-open" role="tabpanel" aria-labelledby="tab-requirements">
         <div class="nl-box">
           <label class="field">用一句话描述
-            <textarea id="nl-text" maxlength="500" placeholder="例如：电机控制，主频至少 170 MHz，LQFP64，要 FDCAN。或：替换 NXP MK64FN1M0VLL12。"></textarea>
+            <textarea id="nl-text" maxlength="500" placeholder="例如：电机控制要 USB；有没有跟 GD32H779 性能接近的，最好从 H5 里找；替换某厂订货号；查看 STM32G474RET3。"></textarea>
           </label>
           <p class="nl-notes" id="nl-notes">点推荐后直接出候选。硬约束可在左侧改。不承诺价格和交期。</p>
         </div>
@@ -116,7 +116,10 @@
       <form id="form-inspect" class="form-panel" role="tabpanel" aria-labelledby="tab-inspect" hidden>
         <div class="form-grid">
           <label class="field span-2">STM32 订货号
-            <input name="part_number" required minlength="3" placeholder="例如 STM32G474RET3">
+            <div class="suggest" id="inspect-suggest">
+              <input name="part_number" id="inspect-part" required minlength="3" placeholder="输入 STM32 开头的系列或订货号" autocomplete="off" aria-autocomplete="list" aria-controls="inspect-suggest-list">
+              <ul class="suggest-list" id="inspect-suggest-list" hidden role="listbox"></ul>
+            </div>
           </label>
         </div>
         <div class="actions"><button type="submit">查看这颗料</button></div>
@@ -124,7 +127,7 @@
 
       <div id="followup" class="followup" hidden>
         <label class="field">还可以改需求或再问一句
-          <textarea id="followup-text" maxlength="500" placeholder="例如：再加 USB；推荐 Flash 更大的；查看 STM32G474RET3。"></textarea>
+          <textarea id="followup-text" maxlength="500" placeholder="例如：再加 USB；相近料从 H5 里找；查看 STM32G474RET3。"></textarea>
         </label>
         <button type="button" id="followup-send">追问</button>
         <p class="nl-notes" id="followup-notes">不承诺价格和交期。硬约束可点上方再改。</p>
@@ -151,5 +154,6 @@
   <script src="./app.js"></script>
   <script src="./parse.js"></script>
   <script src="./turn.js"></script>
+  <script src="./suggest.js"></script>
 </body>
 </html>

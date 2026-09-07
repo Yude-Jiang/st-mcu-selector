@@ -107,3 +107,49 @@
   min-height: 64px;
   resize: vertical;
 }
+
+.suggest {
+  position: relative;
+}
+
+.suggest input {
+  width: 100%;
+}
+
+.suggest-list {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--st-white);
+  border: 1px solid var(--st-gray-2);
+  border-top: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: none;
+}
+
+.suggest-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  color: var(--st-navy);
+  cursor: pointer;
+}
+
+.suggest-list li.is-active,
+.suggest-list li:hover {
+  background: var(--st-gray-1);
+}
+
+.suggest-kind {
+  color: var(--st-slate);
+  font-weight: 400;
+}

@@ -77,8 +77,8 @@ function showFollowup(kind) {
   const notes = $("followup-notes");
   if (box) {
     box.placeholder = kind === "inspect"
-      ? "例如：推荐 Flash 更大的；查看 STM32G474RET3；替换 NXP MK64FN1M0VLL12。"
-      : "例如：再加 USB；推荐相近料；替换 NXP MK64FN1M0VLL12。";
+      ? "例如：推荐 Flash 更大的；查看 STM32G474RET3；替换某厂订货号。"
+      : "例如：再加 USB；相近料从 H5 里找；替换某厂订货号。";
   }
   if (notes) {
     notes.textContent = "不承诺价格和交期。硬约束可点上方再改。";

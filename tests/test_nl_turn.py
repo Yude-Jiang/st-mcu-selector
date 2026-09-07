@@ -52,6 +52,14 @@ class NlTurnTests(unittest.TestCase):
         self.assertEqual(result["must"]["flash_kb"], {"min": 128})
         self.assertTrue(result["rerecommend"])
 
+    def test_vague_question_clarifies_without_nxp_example(self) -> None:
+        result = nl_turn.handle("帮我看看", {}, None, "allow_risk", [], [])
+        self.assertEqual(result["intent"], "explain")
+        self.assertFalse(result["rerecommend"])
+        self.assertIn("还不够检索", result["answer"])
+        self.assertNotIn("MK64", result["answer"])
+        self.assertNotIn("NXP", result["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -83,3 +83,17 @@ def inspect(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/api/suggest")
+def suggest(
+    q: str = Query(min_length=2, max_length=40),
+    limit: int = Query(default=12, ge=1, le=20),
+) -> dict[str, Any]:
+    _ensure_ready()
+    try:
+        return {"items": engine_adapter.suggest_parts(q, limit)}
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

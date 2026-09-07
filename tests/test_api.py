@@ -42,6 +42,10 @@ class SelectionApiTests(unittest.TestCase):
         self.assertIn("SHORTLIST_KEYS", facts)
         self.assertIn("class=\"title-bar\"", response.text)
         self.assertIn(">推荐<", response.text)
+        self.assertIn("./suggest.js", response.text)
+        self.assertIn("inspect-suggest", response.text)
+        self.assertIn("GD32H779", response.text)
+        self.assertNotIn("替换 NXP MK64FN1M0VLL12", response.text)
         self.assertNotIn("填入下方表单", response.text)
         self.assertNotIn("给出短名单", response.text)
         self.assertNotIn("tab-competitor", response.text)
@@ -216,6 +220,40 @@ class SelectionApiTests(unittest.TestCase):
         )
         self.assertIn(response.status_code, (200, 204))
         self.assertTrue(response.headers.get("access-control-allow-origin"))
+
+    def test_suggest_rejects_before_database_ready(self) -> None:
+        readiness.mark_error(RuntimeError("器件库尚未就绪。"))
+        response = self.client.get("/api/suggest", params={"q": "STM32"})
+        self.assertEqual(response.status_code, 503)
+
+    def test_suggest_returns_prefix_items(self) -> None:
+        readiness.mark_ready()
+        fake = [
+            {"value": "STM32H563", "kind": "系列型号"},
+            {"value": "STM32H563RIT6", "kind": "订货号"},
+        ]
+        with patch("routes.selection.engine_adapter.suggest_parts", return_value=fake):
+            response = self.client.get("/api/suggest", params={"q": "STM32H5", "limit": 8})
+        self.assertEqual(response.status_code, 200)
+        items = response.json()["items"]
+        self.assertEqual(items[0]["kind"], "系列型号")
+        self.assertEqual(items[1]["value"], "STM32H563RIT6")
+
+    def test_suggest_parts_sanitizes_short_query(self) -> None:
+        import engine_adapter
+        self.assertEqual(engine_adapter.suggest_parts("S"), [])
+        self.assertEqual(engine_adapter.suggest_parts("!!"), [])
+
+    def test_vague_turn_asks_to_clarify(self) -> None:
+        os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
+        os.environ.pop("DEEPSEEK_API_KEY", None)
+        os.environ.pop("ST_MCU_LLM_KEY", None)
+        response = self.client.post("/api/turn", json={"text": "帮我看看", "candidates": []})
+        self.assertEqual(response.status_code, 200)
+        answer = response.json()["answer"]
+        self.assertIn("还不够检索", answer)
+        self.assertNotIn("MK64", answer)
+        self.assertNotIn("NXP MK64", answer)
 
     def test_miniprogram_calls_same_skill_paths(self) -> None:
         text = Path(ROOT / "miniprogram" / "utils" / "api.js").read_text(encoding="utf-8")
