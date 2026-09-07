@@ -95,9 +95,13 @@ def parse_datasheet(file: Optional[UploadFile] = File(default=None)) -> dict:
     if file is None:
         raise HTTPException(status_code=400, detail="请上传 PDF 规格书或清晰截图。")
     try:
-        data = file.file.read()
+        # Read one byte past the cap instead of the whole upload: the limit has to bite
+        # before the bytes are in memory, or an oversized post can exhaust the instance.
+        data = file.file.read(nl_datasheet.MAX_BYTES + 1)
     except Exception as exc:
         raise HTTPException(status_code=400, detail="无法读取上传文件。") from exc
+    if len(data) > nl_datasheet.MAX_BYTES:
+        raise HTTPException(status_code=413, detail="文件请控制在 8 MB 以内。")
     try:
         return nl_datasheet.parse_bytes(data, file.filename or "upload", file.content_type or "")
     except ValueError as exc:
@@ -139,7 +143,7 @@ def turn(body: TurnBody) -> dict:
         return result
     _ready()
     try:
-            shortlist = engine_adapter.recommend({
+        shortlist = engine_adapter.recommend({
             "must": result.get("must") or {},
             "application": result.get("application"),
             "unknown_policy": result.get("unknown_policy") or "allow_risk",

@@ -70,7 +70,7 @@ class ParseDatasheetApiTests(unittest.TestCase):
         mocked.assert_called_once()
         self.assertIn("shot.png", response.json()["source_note"])
 
-    def test_turn_datasheet_skips_competitor_recall(self) -> None:
+    def test_turn_datasheet_skips_the_model(self) -> None:
         readiness.mark_ready()
         fake = {
             "mode": "competitor",
@@ -78,7 +78,7 @@ class ParseDatasheetApiTests(unittest.TestCase):
             "disclaimer": "check datasheet",
         }
         with patch("routes.parse.engine_adapter.compare", return_value=fake) as mocked:
-            with patch("routes.parse.nl_turn.nl_compare.lookup_competitor_specs") as lookup:
+            with patch("routes.parse.nl_turn.nl_must.complete_json") as complete:
                 response = self.client.post(
                     "/api/turn",
                     json={
@@ -92,7 +92,7 @@ class ParseDatasheetApiTests(unittest.TestCase):
                     },
                 )
         self.assertEqual(response.status_code, 200)
-        lookup.assert_not_called()
+        complete.assert_not_called()
         payload = response.json()
         self.assertEqual(payload["intent"], "compare")
         self.assertEqual(payload["source"], "rules")

@@ -47,30 +47,30 @@ class NlCompareTests(unittest.TestCase):
         self.assertEqual(result["intent"], "compare")
         self.assertEqual(result["compare"]["part_number"], "MK64FN1M0VLL12")
 
-    def test_part_only_needs_deepseek_or_specs(self) -> None:
+    def test_part_only_is_refused(self) -> None:
         os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
         os.environ.pop("DEEPSEEK_API_KEY", None)
         os.environ.pop("ST_MCU_LLM_KEY", None)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(nl_compare.NeedSpecs):
             nl_compare.parse_competitor("替换 NXP MK64FN1M0VLL12")
 
-    def test_part_only_uses_model_specs(self) -> None:
-        fake = {
-            "manufacturer": "NXP",
-            "specs": {"frequency_mhz": 120, "flash_kb": 1024, "pin_count": 100, "package_type": "LQFP", "price": 9},
-            "notes": ["回忆规格"],
-        }
-        with patch.object(nl_must, "complete_json", return_value=fake):
+    def test_part_only_never_asks_the_model_for_specs(self) -> None:
+        # Retrieval must not run on recalled numbers, so a bare part number is refused
+        # even when DeepSeek is available rather than guessed at.
+        with patch.object(nl_must, "complete_json") as complete:
             os.environ["DEEPSEEK_API_KEY"] = "test"
             try:
-                draft = nl_compare.parse_competitor("替换 NXP MK64FN1M0VLL12")
+                with self.assertRaises(nl_compare.NeedSpecs):
+                    nl_compare.parse_competitor("替换 NXP MK64FN1M0VLL12")
             finally:
                 os.environ.pop("DEEPSEEK_API_KEY", None)
+        complete.assert_not_called()
+
+    def test_stated_specs_are_accepted(self) -> None:
+        draft = nl_compare.parse_competitor("替换 NXP MK64FN1M0VLL12，主频 120MHz，Flash 1024KB")
         self.assertEqual(draft["part_number"], "MK64FN1M0VLL12")
         self.assertEqual(draft["specs"]["frequency_mhz"], 120)
         self.assertEqual(draft["specs"]["flash_kb"], 1024)
-        self.assertNotIn("price", draft["specs"])
-        self.assertTrue(draft["recalled_specs"])
         self.assertIn("frequency_mhz", draft["essential"])
 
     def test_part_after_cjk_is_extracted(self) -> None:
@@ -83,7 +83,7 @@ class NlCompareTests(unittest.TestCase):
         self.assertTrue(result["rerecommend"])
         self.assertNotIn("MK64", result["answer"])
 
-    def test_any_vendor_compare_with_model_specs(self) -> None:
+    def test_any_vendor_compare_uses_uploaded_specs(self) -> None:
         overlay = {
             "intent": "compare",
             "must": {},
@@ -94,25 +94,22 @@ class NlCompareTests(unittest.TestCase):
             "notes": [],
             "source": "model",
         }
-        recalled = {
-            "manufacturer": "GigaDevice",
+        sheet = {
             "specs": {"frequency_mhz": 600, "flash_kb": 4096},
-            "notes": ["回忆规格"],
+            "part_number": "GD32H779",
+            "manufacturer": "GigaDevice",
+            "source_note": "规格来自用户上传的 datasheet 摘录（gd32h779.pdf，未保存文件）。",
         }
         with patch.object(nl_turn.nl_intent, "from_model", return_value=overlay):
-            with patch.object(nl_must, "complete_json", return_value=recalled):
-                os.environ["DEEPSEEK_API_KEY"] = "test"
-                try:
-                    result = nl_turn.handle(
-                        "有没有跟GD32H779 性能接近的MCU，最好是从H5中找",
-                        {},
-                        None,
-                        "allow_risk",
-                        [],
-                        [],
-                    )
-                finally:
-                    os.environ.pop("DEEPSEEK_API_KEY", None)
+            result = nl_turn.handle(
+                "有没有跟GD32H779 性能接近的MCU，最好是从H5中找",
+                {},
+                None,
+                "allow_risk",
+                [],
+                [],
+                datasheet=sheet,
+            )
         self.assertEqual(result["intent"], "compare")
         self.assertEqual(result["compare"]["part_number"], "GD32H779")
         self.assertEqual(result["compare"]["manufacturer"], "GigaDevice")
@@ -131,24 +128,42 @@ class NlCompareTests(unittest.TestCase):
             "notes": [],
             "source": "model",
         }
-        recalled = {"manufacturer": "GigaDevice", "specs": {"frequency_mhz": 550, "flash_kb": 3072}, "notes": []}
+        sheet = {
+            "specs": {"frequency_mhz": 550, "flash_kb": 3072},
+            "part_number": "GD32H779",
+            "manufacturer": "GigaDevice",
+            "source_note": "规格来自用户上传的 datasheet 摘录（gd32h779.pdf，未保存文件）。",
+        }
         with patch.object(nl_turn.nl_intent, "from_model", return_value=overlay):
-            with patch.object(nl_must, "complete_json", return_value=recalled):
-                os.environ["DEEPSEEK_API_KEY"] = "test"
-                try:
-                    result = nl_turn.handle(
-                        "有没有跟GD32H779 性能接近的MCU，最好是从H5中找",
-                        {},
-                        None,
-                        "allow_risk",
-                        [],
-                        [],
-                    )
-                finally:
-                    os.environ.pop("DEEPSEEK_API_KEY", None)
+            result = nl_turn.handle(
+                "有没有跟GD32H779 性能接近的MCU，最好是从H5中找",
+                {},
+                None,
+                "allow_risk",
+                [],
+                [],
+                datasheet=sheet,
+            )
         self.assertEqual(result["compare"]["series_prefix"], ["STM32H5"])
         self.assertNotIn("STM32H7", result["compare"]["series_prefix"])
         self.assertEqual(result["compare"]["essential"], [])
+
+    def test_bare_part_without_specs_asks_for_the_datasheet(self) -> None:
+        overlay = {
+            "intent": "compare",
+            "must": {},
+            "series_prefix": [],
+            "competitor": {"manufacturer": "GigaDevice", "part_number": "GD32H779"},
+            "inspect_part": None,
+            "application": None,
+            "notes": [],
+            "source": "model",
+        }
+        with patch.object(nl_turn.nl_intent, "from_model", return_value=overlay):
+            result = nl_turn.handle("替换 GD32H779", {}, None, "allow_risk", [], [])
+        self.assertEqual(result["intent"], "need_specs")
+        self.assertNotIn("compare", result)
+        self.assertIn("datasheet", result["answer"])
 
     def test_explain_compare_empty_does_not_invent_parts(self) -> None:
         answer = nl_compare.explain_compare(
@@ -187,8 +202,8 @@ class NlCompareTests(unittest.TestCase):
         self.assertIn("STM32H523CCT6", answer)
 
 
-    def test_datasheet_skips_competitor_recall(self) -> None:
-        with patch.object(nl_compare, "lookup_competitor_specs") as lookup:
+    def test_datasheet_skips_the_model(self) -> None:
+        with patch.object(nl_must, "complete_json") as complete:
             draft = nl_compare.parse_competitor(
                 "对照这颗竞品",
                 datasheet={
@@ -198,8 +213,7 @@ class NlCompareTests(unittest.TestCase):
                     "source_note": "规格来自用户上传的 datasheet 摘录（mk64.pdf，未保存文件）。",
                 },
             )
-        lookup.assert_not_called()
-        self.assertFalse(draft["recalled_specs"])
+        complete.assert_not_called()
         self.assertEqual(draft["part_number"], "MK64FN1M0VLL12")
         self.assertEqual(draft["specs"]["frequency_mhz"], 120)
         self.assertNotIn("price", draft["specs"])
@@ -210,7 +224,6 @@ class NlCompareTests(unittest.TestCase):
             datasheet={"specs": {"flash_kb": 512, "package_type": "QFN"}},
         )
         self.assertEqual(draft["part_number"], "DATASHEET")
-        self.assertFalse(draft["recalled_specs"])
 
 
 if __name__ == "__main__":

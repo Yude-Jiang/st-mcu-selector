@@ -23,6 +23,7 @@ erDiagram
 3. 数据来源只能写 ST 公开 MCUFinder 数据包，不得声称复现 CubeMX Selector
 4. Key Visual 锁定 Arial 与 ST 色板：`#03234B` `#FFD200` `#3CB4E6`
 5. 终端用户通过网页或微信小程序完成推荐、竞品对照和订货号查询，不得把 ChatGPT MCP 当作唯一入口
+6. 模型不是事实来源。页面上的每一个料号和每一个数字，都必须能追溯到 ST 器件库的检索结果，或用户上传/填写的材料；模型只负责理解意图和把检索结果写成中文。凡是校验不过的模型文字，一律回退到 `nl_brief` 的确定性文本（实现见 `server/engine/nl_ground.py`）
 
 ## 术语表
 

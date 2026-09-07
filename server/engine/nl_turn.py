@@ -8,6 +8,7 @@ from typing import Any
 
 import nl_brief
 import nl_compare
+import nl_ground
 import nl_intent
 import nl_must
 import ui_copy
@@ -121,6 +122,24 @@ def handle(
     if intent == "compare":
         try:
             draft = nl_compare.parse_competitor(cleaned, datasheet=datasheet)
+        except nl_compare.NeedSpecs:
+            # The competitor part carries no verifiable specs, so it cannot drive
+            # retrieval. Anything else the engineer gave us still can; only when there
+            # is nothing left to search on do we stop and ask for the datasheet.
+            if current_must or series_prefix:
+                intent = "refine_must"
+                draft = None
+                notes_extra = notes_extra + [copy["need_specs"]]
+            else:
+                return _payload(
+                    "need_specs",
+                    copy["need_specs"],
+                    current_must,
+                    application,
+                    policy,
+                    "rules",
+                    series_prefix=series_prefix,
+                )
         except ValueError:
             if current_must or series_prefix:
                 intent = "refine_must"
@@ -132,14 +151,13 @@ def handle(
                 vendor = overlay["competitor"].get("manufacturer")
                 if vendor:
                     draft["manufacturer"] = vendor
-            recalled = bool(draft.get("recalled_specs"))
             result = _payload(
                 "compare",
                 copy["compare"],
                 current_must,
                 application,
                 policy,
-                "model" if recalled else "rules",
+                "rules",
                 notes=list(draft.get("notes") or []) + notes_extra,
                 series_prefix=series_prefix,
             )
@@ -255,7 +273,9 @@ def explain(text: str, candidates: list[dict[str, Any]], history: list[str], lan
     except Exception:
         return fallback + "\n" + copy["llm_down"]
     answer = str(raw.get("answer") or "").strip()
-    return answer or fallback
+    # Ground against the retrieved shortlist only. The question and history are the
+    # engineer's own words, so numbers they typed must not license numbers we print.
+    return nl_ground.enforce(answer, fallback, candidates, candidates)
 
 
 def explain_with_facts(candidates: list[dict[str, Any]]) -> str:
