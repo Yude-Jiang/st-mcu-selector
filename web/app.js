@@ -106,13 +106,33 @@ function capabilityLists(lists) {
     .join("");
 }
 
+function compareLeadHtml(payload) {
+  const competitor = payload && payload.compare;
+  if (!competitor || payload.mode !== "competitor") return "";
+  const name = [competitor.manufacturer, competitor.part_number].filter(Boolean).join(" ");
+  const specs = competitor.specs || {};
+  const bits = [];
+  if (specs.frequency_mhz != null) bits.push(`主频 ${specs.frequency_mhz} MHz`);
+  if (specs.flash_kb != null) bits.push(`Flash ${specs.flash_kb} KB`);
+  if (specs.ram_kb != null) bits.push(`RAM ${specs.ram_kb} KB`);
+  if (specs.pin_count != null) bits.push(`${specs.pin_count} 引脚`);
+  if (specs.package_type) bits.push(String(specs.package_type));
+  const specLine = bits.length ? `竞品规格：${bits.join("，")}。` : "";
+  return `<p class="compare-lead">对照 ${escapeHtml(name)}。${escapeHtml(specLine)} 下列订货号来自公开 MCU 数据库，不是模型编造。</p>`;
+}
+
 function renderCards(payload) {
   const items = payload.recommendations || [];
+  const mode = payload.mode === "competitor" ? "competitor" : "requirements";
+  const heading = mode === "competitor" ? "数据库短名单（含对照）" : "数据库短名单";
+  const lead = compareLeadHtml(payload);
   if (items.length === 0) {
-    $("results").innerHTML = "<p class='meta'>没有满足硬约束的候选。放宽 must 条件后再试。</p>";
+    const empty = mode === "competitor"
+      ? "数据库没有筛出可对照的 STM32 订货号。"
+      : "没有满足硬约束的候选。放宽硬约束后再试。";
+    $("results").innerHTML = `<h2 class="results-title">${heading}</h2>${lead}<p class="meta">${empty}</p>`;
     return;
   }
-  const mode = payload.mode === "competitor" ? "competitor" : "requirements";
   const cards = items.map((item, index) => {
     const view = shortlistModel(item, index, mode);
     return `
@@ -124,13 +144,13 @@ function renderCards(payload) {
         </div>
         <p class="status-banner is-${escapeHtml(view.status.kind)}">${escapeHtml(view.status.text)}</p>
         <div class="facts">${view.facts.map((chip) => `<span>${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}</span>`).join("")}</div>
-        <div class="lists">${listBlock("匹配度说明", view.matchLines)}</div>
+        <div class="lists">${listBlock(view.evidenceTitle, view.matchLines)}</div>
         ${view.otherPackages.length ? `<p class="other-packages"><b>同系列还有这些封装</b><br>${view.otherPackages.map((line) => escapeHtml(line)).join("<br>")}</p>` : ""}
       </article>`;
   });
   const rejected = payload.rejected_by_hard_constraints;
   const extra = rejected === undefined ? "" : `硬约束剔除 ${rejected} 颗。`;
-  $("results").innerHTML = `${cards.join("")}<p class="meta">${escapeHtml(payload.disclaimer || "")} ${extra}</p>`;
+  $("results").innerHTML = `<h2 class="results-title">${heading}</h2>${lead}${cards.join("")}<p class="meta">${escapeHtml(payload.disclaimer || "")} ${extra}</p>`;
 }
 
 function renderInspect(payload) {

@@ -27,9 +27,13 @@
 .drop-zone {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px;
-  border: 1px solid var(--st-gray-2);
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 168px;
+  padding: 28px 20px;
+  text-align: center;
+  border: 2px dashed var(--st-gray-2);
   background: var(--st-white);
   color: var(--st-navy);
   cursor: pointer;
@@ -42,12 +46,13 @@
 }
 
 .drop-title {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .drop-notes,
 .drop-file {
+  max-width: 28em;
   font-size: 13px;
   font-weight: 400;
   color: var(--st-slate);
@@ -65,6 +70,25 @@
 
 .page.has-results .form-grid {
   grid-template-columns: 1fr;
+}
+
+.results-title {
+  background: var(--st-navy);
+  color: var(--st-white);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 12px 16px;
+  margin: 0 0 12px;
+}
+
+.compare-lead {
+  background: var(--st-gray-1);
+  color: var(--st-navy);
+  font-size: 14px;
+  line-height: 1.55;
+  padding: 12px 16px 16px;
+  margin: 0 0 12px;
 }
 
 .brief {

@@ -188,7 +188,7 @@ async function askEngine(text, options) {
     if (payload.inspect) {
       if (!seed) appendTurn(cleaned, payload.answer || "");
       renderInspect(payload.inspect);
-    } else if (payload.recommendations) {
+    } else if (Array.isArray(payload.recommendations)) {
       renderCards(payload);
     } else if (payload.answer) {
       appendTurn(cleaned, payload.answer);

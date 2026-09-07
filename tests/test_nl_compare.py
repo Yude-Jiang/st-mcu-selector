@@ -118,6 +118,63 @@ class NlCompareTests(unittest.TestCase):
         self.assertEqual(result["compare"]["manufacturer"], "GigaDevice")
         self.assertEqual(result["compare"]["series_prefix"], ["STM32H5"])
         self.assertEqual(result["compare"]["specs"]["frequency_mhz"], 600)
+        self.assertEqual(result["compare"]["essential"], [])
+
+    def test_model_cannot_widen_named_series_to_h7(self) -> None:
+        overlay = {
+            "intent": "compare",
+            "must": {},
+            "series_prefix": ["STM32H7"],
+            "competitor": {"manufacturer": "GigaDevice", "part_number": "GD32H779"},
+            "inspect_part": None,
+            "application": None,
+            "notes": [],
+            "source": "model",
+        }
+        recalled = {"manufacturer": "GigaDevice", "specs": {"frequency_mhz": 550, "flash_kb": 3072}, "notes": []}
+        with patch.object(nl_turn.nl_intent, "from_model", return_value=overlay):
+            with patch.object(nl_must, "complete_json", return_value=recalled):
+                os.environ["DEEPSEEK_API_KEY"] = "test"
+                try:
+                    result = nl_turn.handle(
+                        "有没有跟GD32H779 性能接近的MCU，最好是从H5中找",
+                        {},
+                        None,
+                        "allow_risk",
+                        [],
+                        [],
+                    )
+                finally:
+                    os.environ.pop("DEEPSEEK_API_KEY", None)
+        self.assertEqual(result["compare"]["series_prefix"], ["STM32H5"])
+        self.assertNotIn("STM32H7", result["compare"]["series_prefix"])
+        self.assertEqual(result["compare"]["essential"], [])
+
+    def test_explain_compare_empty_does_not_invent_parts(self) -> None:
+        answer = nl_compare.explain_compare(
+            {"part_number": "GD32H779", "specs": {"frequency_mhz": 550}},
+            {"recommendations": []},
+        )
+        self.assertNotIn("STM32H743", answer)
+        self.assertNotIn("STM32H750", answer)
+        self.assertIn("不能据此编造", answer)
+
+    def test_explain_compare_drops_invented_h7(self) -> None:
+        os.environ["DEEPSEEK_API_KEY"] = "test"
+        try:
+            with patch.object(
+                nl_must,
+                "complete_json",
+                return_value={"answer": "建议 STM32H743、STM32H750 和 STM32H723。"},
+            ):
+                answer = nl_compare.explain_compare(
+                    {"part_number": "GD32H779"},
+                    {"recommendations": [{"part_number": "STM32H523CCT6", "facts": {}}]},
+                )
+        finally:
+            os.environ.pop("DEEPSEEK_API_KEY", None)
+        self.assertNotIn("STM32H743", answer)
+        self.assertIn("STM32H523CCT6", answer)
 
 
     def test_datasheet_skips_competitor_recall(self) -> None:

@@ -132,8 +132,18 @@ def lookup_competitor_specs(manufacturer: str, part_number: str) -> dict[str, An
     return {"specs": specs, "manufacturer": vendor, "notes": notes}
 
 
+EMPTY_COMPARE = (
+    "指定系列里没有筛出短名单卡片，不能据此编造 STM32 订货号。"
+    "竞品规格若来自模型回忆，主频或 Flash 可能远高于该系列。"
+    "请在该系列内按接近程度再查，或放宽系列后对照。"
+)
+STM32_TOKEN = re.compile(r"STM32[A-Z0-9]+", re.I)
+
+
 def explain_compare(competitor: dict[str, Any], shortlist: dict[str, Any]) -> str:
     items = shortlist.get("recommendations") or []
+    if not items:
+        return EMPTY_COMPARE
     fallback = _reason_from_cards(competitor, items)
     if not nl_must.llm_configured():
         return fallback
@@ -163,7 +173,21 @@ def explain_compare(competitor: dict[str, Any], shortlist: dict[str, Any]) -> st
     except Exception:
         return fallback
     answer = str(raw.get("answer") or "").strip()
-    return answer or fallback
+    if not answer or _invented_stm32(answer, items):
+        return fallback
+    return answer
+
+
+def _invented_stm32(answer: str, items: list[dict[str, Any]]) -> bool:
+    allowed = [str(item.get("part_number") or "").upper() for item in items if item.get("part_number")]
+    if not allowed:
+        return bool(STM32_TOKEN.search(answer or ""))
+    for token in STM32_TOKEN.findall(answer or ""):
+        upper = token.upper()
+        if any(part.startswith(upper) or upper.startswith(part) for part in allowed):
+            continue
+        return True
+    return False
 
 
 def sanitize_specs(raw: dict[str, Any]) -> dict[str, Any]:

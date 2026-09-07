@@ -45,7 +45,7 @@ def handle(
     slim = [slim_candidate(item) for item in candidates][:3]
     current_must = dict(must or {})
     policy = unknown_policy if unknown_policy in {"allow_risk", "exclude"} else "allow_risk"
-    series_prefix = nl_intent.extract_series_prefix(cleaned)
+    user_series = nl_intent.extract_series_prefix(cleaned)
     intent = classify(cleaned, slim)
     overlay = None
     if intent != "refuse" and not (slim and intent == "explain"):
@@ -55,14 +55,15 @@ def handle(
             intent = overlay["intent"]
         current_must = dict(current_must)
         current_must.update(overlay.get("must") or {})
-        for token in overlay.get("series_prefix") or []:
-            if token not in series_prefix:
-                series_prefix.append(token)
         if overlay.get("application"):
             application = overlay["application"]
         notes_extra = list(overlay.get("notes") or [])
     else:
         notes_extra = []
+    series_prefix = nl_intent.merge_series_prefix(
+        user_series,
+        (overlay or {}).get("series_prefix") if overlay else None,
+    )
     if overlay and overlay.get("intent") == "recommend":
         intent = "refine_must"
     if overlay and (overlay.get("competitor") or {}).get("part_number"):
@@ -124,6 +125,11 @@ def handle(
                 for key in ("manufacturer", "part_number", "source_note", "specs", "essential", "limit")
             }
             result["compare"]["series_prefix"] = series_prefix
+            if series_prefix:
+                result["compare"]["essential"] = []
+                result["notes"] = list(result.get("notes") or []) + [
+                    "点名系列优先：竞品主频/存储只作接近排序，不要求 STM32 达到同等数字。",
+                ]
             return result
     if intent == "refine_must":
         merged = dict(current_must)

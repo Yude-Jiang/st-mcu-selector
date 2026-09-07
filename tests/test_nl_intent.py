@@ -17,6 +17,13 @@ class NlIntentTests(unittest.TestCase):
         text = "有没有跟GD32H779 性能接近的MCU，最好是从H5中找"
         self.assertEqual(nl_intent.extract_series_prefix(text), ["STM32H5"])
 
+    def test_user_series_not_widened_by_model(self) -> None:
+        self.assertEqual(
+            nl_intent.merge_series_prefix(["STM32H5"], ["STM32H7", "STM32H5"]),
+            ["STM32H5"],
+        )
+        self.assertEqual(nl_intent.merge_series_prefix([], ["H7"]), ["STM32H7"])
+
     def test_extract_named_stm32_series(self) -> None:
         self.assertEqual(nl_intent.extract_series_prefix("优先 STM32G4"), ["STM32G4"])
 

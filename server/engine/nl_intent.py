@@ -51,6 +51,17 @@ def extract_series_prefix(text: str) -> list[str]:
     return unique[:3]
 
 
+def merge_series_prefix(from_text: list[str], from_model: list[str] | None) -> list[str]:
+    if from_text:
+        return from_text[:3]
+    unique: list[str] = []
+    for item in from_model or []:
+        token = normalize_prefix(str(item))
+        if token and token not in unique:
+            unique.append(token)
+    return unique[:3]
+
+
 def normalize_prefix(raw: str) -> str:
     token = re.sub(r"[^A-Z0-9]", "", str(raw or "").upper())
     if not token:

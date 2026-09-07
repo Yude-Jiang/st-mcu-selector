@@ -169,6 +169,7 @@ function shortlistModel(item, index, mode) {
     stUrl: stProductUrl(item.part_number, item.rpn || item.reference),
     status: lifecycleStatus(item.status),
     facts: factEntries(item.facts, SHORTLIST_KEYS),
+    evidenceTitle: mode === "competitor" ? "与竞品对照" : "匹配度说明",
     matchLines: matchLines(item, mode),
     otherPackages: item.other_packages || [],
   };
