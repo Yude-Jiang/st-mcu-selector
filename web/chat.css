@@ -1,0 +1,97 @@
+.must-panel {
+  border-top: 1px solid var(--st-gray-2);
+}
+
+.must-panel summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--st-navy);
+  padding: 12px 16px;
+  background: var(--st-gray-1);
+}
+
+.must-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.page.has-results .nl-box {
+  display: none;
+}
+
+.page.has-results .form-grid {
+  grid-template-columns: 1fr;
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.bubble {
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.bubble.is-user {
+  background: var(--st-navy);
+  color: var(--st-white);
+}
+
+.bubble.is-assistant {
+  background: var(--st-gray-1);
+  color: var(--st-navy);
+}
+
+.followup {
+  background: var(--st-white);
+  padding: 12px 16px 16px;
+  border-top: 4px solid var(--st-yellow);
+}
+
+.followup-label {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.followup-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.followup-chips button,
+.followup > button {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  border: 0;
+  min-height: 36px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.followup-chips button {
+  background: var(--st-gray-1);
+  color: var(--st-navy);
+}
+
+.followup > button {
+  background: var(--st-navy);
+  color: var(--st-white);
+  margin-top: 8px;
+}
+
+.followup textarea {
+  min-height: 64px;
+  resize: vertical;
+}

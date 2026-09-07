@@ -9,7 +9,7 @@
 .form-panel {
   display: none;
   background: var(--st-white);
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .form-panel.is-open {
@@ -137,8 +137,10 @@
 
 .card-head {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  align-items: center;
+  gap: 8px 12px;
   background: var(--st-navy);
   color: var(--st-white);
   padding: 12px 16px;

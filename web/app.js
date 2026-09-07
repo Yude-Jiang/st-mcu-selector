@@ -11,7 +11,6 @@ function showMode(mode) {
   });
   [
     ["requirements", "form-requirements"],
-    ["competitor", "form-competitor"],
     ["inspect", "form-inspect"],
   ].forEach(([key, id]) => {
     const panel = $(id);
@@ -121,14 +120,11 @@ function renderCards(payload) {
         <div class="card-head">
           <strong>${view.rank}. ${escapeHtml(view.partNumber)}</strong>
           <span>匹配度 ${escapeHtml(view.score)}</span>
+          <a class="st-link" href="${escapeHtml(view.stUrl)}" target="_blank" rel="noopener noreferrer">ST 产品页</a>
         </div>
         <p class="status-banner is-${escapeHtml(view.status.kind)}">${escapeHtml(view.status.text)}</p>
         <div class="facts">${view.facts.map((chip) => `<span>${escapeHtml(chip.label)}: ${escapeHtml(chip.value)}</span>`).join("")}</div>
-        <div class="lists">
-          ${listBlock(view.evidenceTitle, view.evidence)}
-          ${listBlock("匹配度说明", view.penalties)}
-          ${listBlock("风险 / 缺口", view.risks)}
-        </div>
+        <div class="lists">${listBlock("匹配度说明", view.matchLines)}</div>
         ${view.otherPackages.length ? `<p class="other-packages"><b>同系列还有这些封装</b><br>${view.otherPackages.map((line) => escapeHtml(line)).join("<br>")}</p>` : ""}
       </article>`;
   });
@@ -172,42 +168,17 @@ async function postJson(url, body) {
 $("form-requirements").addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  const data = new FormData(form);
+  const text = ($("nl-text") && $("nl-text").value.trim()) || "";
   try {
+    if (text.length >= 4 && typeof askEngine === "function") {
+      await askEngine(text, { seed: true });
+      return;
+    }
+    const data = new FormData(form);
     const payload = await postJson("/api/recommend", {
       must: collectMust(form),
       application: data.get("application") || null,
       unknown_policy: data.get("unknown_policy") || "allow_risk",
-      limit: 3,
-    });
-    setBanner("", false);
-    renderCards(payload);
-  } catch (error) {
-    setBanner(error.message, true);
-  }
-});
-
-$("form-competitor").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const data = new FormData(event.currentTarget);
-  const specs = {};
-  ["frequency_mhz", "flash_kb", "ram_kb", "pin_count", "fdcan", "usb", "motor_timers", "hrtim"].forEach((name) => {
-    const value = numberOrNull(data.get(name));
-    if (value !== null) specs[name] = value;
-  });
-  const packageType = String(data.get("package_type") || "").trim();
-  if (packageType) specs.package_type = packageType;
-  if (Object.keys(specs).length === 0) {
-    setBanner("请至少填写一项已核实的竞品规格。", true);
-    return;
-  }
-  try {
-    const payload = await postJson("/api/compare", {
-      manufacturer: data.get("manufacturer"),
-      part_number: data.get("part_number"),
-      source_note: data.get("source_note"),
-      specs,
-      essential: Object.keys(specs),
       limit: 3,
     });
     setBanner("", false);
@@ -266,8 +237,8 @@ async function refreshHealth() {
     const notes = $("nl-notes");
     if (notes && payload.llm && notes.dataset.source !== "parse") {
       notes.textContent = payload.llm.configured
-        ? "DeepSeek 会把这句话改成硬约束，短名单仍由数据库计算。请核对表单后再查询。"
-        : "未配置 DeepSeek 时按关键词抽取。短名单仍由数据库计算。请核对表单后再查询。";
+        ? "DeepSeek 会把这句话改成硬约束或竞品规格，点推荐后由数据库出候选。"
+        : "未配置 DeepSeek 时按关键词抽取。点推荐后由数据库出候选。";
     }
   } catch (error) {
     $("db-status").textContent = "无法连接选型服务";

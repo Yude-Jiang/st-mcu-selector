@@ -12,6 +12,7 @@
   <meta name="twitter:description" content="ST MCU Selector：按必须满足的规格、已核实的竞品参数或 STM32 订货号，从意法半导体公开 MCU 数据库给出最多三个候选。结果是短名单，设计前需核对 datasheet。">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./forms.css">
+  <link rel="stylesheet" href="./chat.css">
 </head>
 <body>
   <div id="root">
@@ -32,12 +33,8 @@
     <main class="page">
       <div class="modes" role="tablist" aria-label="选择任务">
         <button class="mode is-active" type="button" role="tab" id="tab-requirements" data-mode="requirements" aria-selected="true" aria-controls="form-requirements" tabindex="0">
-          <span class="mode-head">按需求推荐</span>
-          <span class="mode-body">按必须规格拿三颗候选</span>
-        </button>
-        <button class="mode" type="button" role="tab" id="tab-competitor" data-mode="competitor" aria-selected="false" aria-controls="form-competitor" tabindex="-1">
-          <span class="mode-head">竞品对照</span>
-          <span class="mode-body">用已核实规格对照 STM32</span>
+          <span class="mode-head">推荐</span>
+          <span class="mode-body">一句话需求或竞品对照，最多三颗候选</span>
         </button>
         <button class="mode" type="button" role="tab" id="tab-inspect" data-mode="inspect" aria-selected="false" aria-controls="form-inspect" tabindex="-1">
           <span class="mode-head">查看订货号</span>
@@ -47,14 +44,18 @@
 
       <p class="banner" id="banner"></p>
 
+      <div class="workspace">
+      <div class="workspace-ask">
       <form id="form-requirements" class="form-panel is-open" role="tabpanel" aria-labelledby="tab-requirements">
         <div class="nl-box">
-          <label class="field">用一句话描述需求（可选）
-            <textarea id="nl-text" maxlength="500" placeholder="例如：电机控制，主频至少 170 MHz，LQFP64，要 FDCAN。不要写价格或交期。"></textarea>
+          <label class="field">用一句话描述
+            <textarea id="nl-text" maxlength="500" placeholder="例如：电机控制，主频至少 170 MHz，LQFP64，要 FDCAN。或：替换 NXP MK64FN1M0VLL12。"></textarea>
           </label>
-          <button type="button" id="nl-fill">填入下方表单</button>
-          <p class="nl-notes" id="nl-notes">大模型只改写硬约束，短名单仍由数据库计算。请核对表单后再查询。</p>
+          <p class="nl-notes" id="nl-notes">点推荐后直接出候选。硬约束可在左侧改。不承诺价格和交期。</p>
         </div>
+        <div class="actions"><button type="submit">推荐</button></div>
+        <details id="must-panel" class="must-panel" open>
+        <summary>硬约束（可改后再点推荐）</summary>
         <div class="form-grid">
           <label class="field">应用
             <select name="application">
@@ -109,49 +110,7 @@
             </select>
           </label>
         </div>
-        <div class="actions"><button type="submit">给出短名单</button></div>
-      </form>
-
-      <form id="form-competitor" class="form-panel" role="tabpanel" aria-labelledby="tab-competitor" hidden>
-        <div class="form-grid">
-          <label class="field">厂商
-            <input name="manufacturer" required placeholder="例如 NXP">
-          </label>
-          <label class="field">竞品订货号
-            <input name="part_number" required>
-          </label>
-          <label class="field span-3">规格来源（datasheet 链接、版本或页码）
-            <input name="source_note" required minlength="5" placeholder="必须填写已核实来源，不能留空">
-          </label>
-          <label class="field">主频 (MHz)
-            <input name="frequency_mhz" type="number">
-          </label>
-          <label class="field">Flash (KB)
-            <input name="flash_kb" type="number">
-          </label>
-          <label class="field">RAM (KB)
-            <input name="ram_kb" type="number">
-          </label>
-          <label class="field">引脚数
-            <input name="pin_count" type="number">
-          </label>
-          <label class="field">封装
-            <input name="package_type" placeholder="例如 LQFP">
-          </label>
-          <label class="field">FDCAN
-            <input name="fdcan" type="number">
-          </label>
-          <label class="field">USB
-            <input name="usb" type="number">
-          </label>
-          <label class="field">电机定时器
-            <input name="motor_timers" type="number">
-          </label>
-          <label class="field">HRTIM
-            <input name="hrtim" type="number">
-          </label>
-        </div>
-        <div class="actions"><button type="submit">对照相近 STM32</button></div>
+        </details>
       </form>
 
       <form id="form-inspect" class="form-panel" role="tabpanel" aria-labelledby="tab-inspect" hidden>
@@ -163,7 +122,19 @@
         <div class="actions"><button type="submit">查看这颗料</button></div>
       </form>
 
+      <section id="thread" class="thread" hidden></section>
+      <div id="followup" class="followup" hidden>
+        <p class="followup-label">继续问</p>
+        <div class="followup-chips" id="followup-chips"></div>
+        <label class="field">追问
+          <textarea id="followup-text" maxlength="500" placeholder="用一句话继续查：问规格、推荐相近料、替换竞品，或再写一颗订货号。"></textarea>
+        </label>
+        <button type="button" id="followup-send">继续问</button>
+        <p class="nl-notes" id="followup-notes">可以接着查，不限于当前结果。不承诺价格和交期。</p>
+      </div>
+      </div>
       <section id="results" class="results" aria-live="polite"></section>
+      </div>
     </main>
 
     <footer>
@@ -175,5 +146,6 @@
   <script src="./facts.js"></script>
   <script src="./app.js"></script>
   <script src="./parse.js"></script>
+  <script src="./turn.js"></script>
 </body>
 </html>

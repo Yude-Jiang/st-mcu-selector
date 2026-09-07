@@ -109,6 +109,34 @@ function stComSearchUrl(partNumber) {
   return `https://www.st.com/content/st_com/en/search.html#q=${query}&t=products`;
 }
 
+function stProductUrl(partNumber, rpn) {
+  const commercial = String(rpn || "").trim().toLowerCase();
+  if (commercial) {
+    return `https://www.st.com/en/microcontrollers-microprocessors/${encodeURIComponent(commercial)}.html`;
+  }
+  return stComSearchUrl(partNumber);
+}
+
+function matchLines(item, mode) {
+  const lines = [];
+  const description = String(item.description || "").trim();
+  if (description) lines.push(`产品定位：${description}`);
+  if (item.score != null && item.score !== "") {
+    lines.push(`匹配度 ${item.score}。硬约束过筛后，按规格贴合和应用画像扣分。`);
+  }
+  const prefix = mode === "competitor" ? "对照" : "满足";
+  (item.matches || item.comparisons || []).forEach((row) => {
+    if (row) lines.push(`${prefix}：${row}`);
+  });
+  (item.penalties || []).forEach((row) => {
+    if (row) lines.push(`扣分：${row}`);
+  });
+  (item.risks || []).forEach((row) => {
+    if (row) lines.push(`风险：${row}`);
+  });
+  return lines;
+}
+
 function inspectModel(payload) {
   const facts = payload.normalized || {};
   const rpn = payload.rpn || {};
@@ -123,7 +151,7 @@ function inspectModel(payload) {
   })).filter((entry) => entry.items.length > 0);
   return {
     partNumber,
-    stUrl: stComSearchUrl(partNumber),
+    stUrl: stProductUrl(partNumber, rpn.rpn),
     status: lifecycleStatus(rpn.marketingStatus),
     description: rpn.description || payload.reference || "",
     identity: factEntries(facts, IDENTITY_KEYS),
@@ -138,12 +166,10 @@ function shortlistModel(item, index, mode) {
     rank: index + 1,
     partNumber: item.part_number,
     score: item.score,
+    stUrl: stProductUrl(item.part_number, item.rpn || item.reference),
     status: lifecycleStatus(item.status),
     facts: factEntries(item.facts, SHORTLIST_KEYS),
-    evidenceTitle: mode === "competitor" ? "与竞品对照" : "依据",
-    evidence: item.matches || item.comparisons || [],
-    penalties: item.penalties || [],
+    matchLines: matchLines(item, mode),
     otherPackages: item.other_packages || [],
-    risks: item.risks || [],
   };
 }

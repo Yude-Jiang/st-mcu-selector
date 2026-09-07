@@ -25,17 +25,24 @@ class SelectionApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("id=\"root\"", response.text)
         self.assertIn("./parse.js", response.text)
-        self.assertIn("/api/parse-requirements", Path(ROOT / "web" / "parse.js").read_text(encoding="utf-8"))
+        self.assertIn("./turn.js", response.text)
+        self.assertIn("id=\"followup-chips\"", response.text)
+        self.assertNotIn("为什么是这三颗", response.text)
+        self.assertIn("inspectChips", Path(ROOT / "web" / "turn.js").read_text(encoding="utf-8"))
         self.assertIn("name=\"motor_timers\"", response.text)
         self.assertIn("name=\"hrtim\"", response.text)
         self.assertIn("name=\"usb\"", response.text)
         facts = Path(ROOT / "web" / "facts.js").read_text(encoding="utf-8")
         self.assertIn("即将供货", facts)
-        self.assertIn("st.com/content/st_com/en/search.html", facts)
-        self.assertIn("与竞品对照", facts)
+        self.assertIn("st.com/en/microcontrollers-microprocessors", facts)
+        self.assertIn("matchLines", facts)
         self.assertIn("SHORTLIST_KEYS", facts)
         self.assertIn("class=\"title-bar\"", response.text)
-        self.assertIn("MCU Selector", response.text)
+        self.assertIn(">推荐<", response.text)
+        self.assertNotIn("填入下方表单", response.text)
+        self.assertNotIn("给出短名单", response.text)
+        self.assertNotIn("tab-competitor", response.text)
+        self.assertIn("ST 产品页", Path(ROOT / "web" / "app.js").read_text(encoding="utf-8"))
         self.assertIn("最多给出三个订货号。这是短名单，不是设计签核。", response.text)
         self.assertIn("数据库匹配只给候选；最多给出三个订货号", response.text)
         self.assertIn("helon.chen@st.com", response.text)
@@ -73,6 +80,82 @@ class SelectionApiTests(unittest.TestCase):
         self.assertEqual(payload["application"], "motor_control")
         self.assertEqual(payload["must"]["frequency_mhz"], {"min": 170})
         self.assertNotIn("recommendations", payload)
+
+    def test_turn_explains_without_new_shortlist(self) -> None:
+        os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
+        os.environ.pop("DEEPSEEK_API_KEY", None)
+        os.environ.pop("ST_MCU_LLM_KEY", None)
+        response = self.client.post(
+            "/api/turn",
+            json={
+                "text": "为什么是这三颗？",
+                "must": {"flash_kb": {"min": 512}},
+                "candidates": [{
+                    "part_number": "STM32G474RET3",
+                    "score": 91,
+                    "facts": {"frequency_mhz": 170, "flash_kb": 512},
+                }],
+                "history": [],
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["intent"], "explain")
+        self.assertIn("STM32G474RET3", payload["answer"])
+        self.assertNotIn("recommendations", payload)
+
+    def test_turn_refine_reruns_recommend(self) -> None:
+        os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
+        os.environ.pop("DEEPSEEK_API_KEY", None)
+        os.environ.pop("ST_MCU_LLM_KEY", None)
+        readiness.mark_ready()
+        fake = {
+            "mode": "requirements",
+            "recommendations": [{"part_number": "STM32G474RET3", "score": 91, "facts": {}, "matches": [], "risks": []}],
+            "disclaimer": "check datasheet",
+        }
+        with patch("routes.parse.engine_adapter.recommend", return_value=fake):
+            response = self.client.post(
+                "/api/turn",
+                json={
+                    "text": "再加 USB",
+                    "must": {"flash_kb": {"min": 512}},
+                    "candidates": [{"part_number": "STM32G431RBT6", "facts": {}}],
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["intent"], "refine_must")
+        self.assertEqual(payload["must"]["usb"], {"min": 1})
+        self.assertEqual(payload["recommendations"][0]["part_number"], "STM32G474RET3")
+
+    def test_turn_compare_uses_competitor_sentence(self) -> None:
+        os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
+        os.environ.pop("DEEPSEEK_API_KEY", None)
+        os.environ.pop("ST_MCU_LLM_KEY", None)
+        readiness.mark_ready()
+        fake = {
+            "mode": "competitor",
+            "recommendations": [{"part_number": "STM32F429ZIT6", "score": 88, "facts": {}, "comparisons": ["主频：ST=180"]}],
+        }
+        with patch("routes.parse.engine_adapter.compare", return_value=fake) as mocked:
+            response = self.client.post(
+                "/api/turn",
+                json={
+                    "text": "对照 NXP MK64FN1M0VLL12，主频 120 MHz，Flash 1MB，LQFP100，来源 datasheet Rev 3",
+                    "candidates": [],
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["intent"], "compare")
+        self.assertEqual(payload["recommendations"][0]["part_number"], "STM32F429ZIT6")
+        mocked.assert_called_once()
+        body = mocked.call_args[0][0]
+        self.assertEqual(body["manufacturer"], "NXP")
+        self.assertEqual(body["part_number"], "MK64FN1M0VLL12")
+        self.assertEqual(body["specs"]["frequency_mhz"], 120)
+        self.assertEqual(body["specs"]["flash_kb"], 1024)
 
     def test_inspect_not_found_is_structured(self) -> None:
         readiness.mark_ready()

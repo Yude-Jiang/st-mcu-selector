@@ -153,6 +153,10 @@ def sanitize_draft(raw: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def call_model(text: str) -> dict[str, Any] | None:
+    return complete_json(SYSTEM_PROMPT, text, timeout=12)
+
+
+def complete_json(system_prompt: str, user_text: str, timeout: int = 12) -> dict[str, Any] | None:
     api_key = llm_api_key()
     if not api_key:
         return None
@@ -163,8 +167,8 @@ def call_model(text: str) -> dict[str, Any] | None:
         "temperature": 0,
         "response_format": {"type": "json_object"},
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": text},
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_text},
         ],
     }).encode("utf-8")
     request = urllib.request.Request(
@@ -177,7 +181,7 @@ def call_model(text: str) -> dict[str, Any] | None:
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=12) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             body = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         print(f"DeepSeek HTTP {exc.code}", file=sys.stderr, flush=True)
