@@ -10,3 +10,6 @@ __pycache__/
 .claude/
 project.private.config.json
 miniprogram/project.private.config.json
+
+# npm install 生成；CI 用 npm install，不锁版本
+package-lock.json
