@@ -10,7 +10,14 @@ ENGINE = ROOT / "server" / "engine"
 sys.path.insert(0, str(ENGINE))
 os.chdir(ROOT)
 
-from shortlist import diversify_by_rpn, diversify_by_series, matches_series_prefix, pick_shortlist, series_group  # noqa: E402
+from shortlist import (  # noqa: E402
+    capacity_rank,
+    diversify_by_rpn,
+    diversify_by_series,
+    matches_series_prefix,
+    pick_shortlist,
+    series_group,
+)
 import mcu_recommender as engine  # noqa: E402
 
 
@@ -21,6 +28,20 @@ class ShortlistTests(unittest.TestCase):
         self.assertEqual(series_group("STM32G474RET3", "STM32G474RE"), "STM32G474")
         self.assertEqual(series_group("STM32L4R5ZIT6", "STM32L4R5ZI"), "STM32L4R5")
         self.assertEqual(series_group("STM32WBA52CEU6", "STM32WBA52CE"), "STM32WBA52")
+
+    def test_capacity_rank_prefers_larger_flash(self) -> None:
+        low = _item("STM32H503CBT6", "STM32H503CB", "LQFP48", 48, flash=128, freq=250, ram=32)
+        high = _item("STM32H573ZIT6", "STM32H573ZI", "LQFP144", 144, flash=2048, freq=250, ram=640)
+        self.assertGreater(capacity_rank(high), capacity_rank(low))
+        ranked = [dict(low, score=100.0), dict(high, score=100.0)]
+        ranked.sort(
+            key=lambda item: (
+                -item["score"],
+                tuple(-value for value in capacity_rank(item)),
+                item["part_number"],
+            )
+        )
+        self.assertEqual(ranked[0]["part_number"], "STM32H573ZIT6")
 
     def test_diversify_keeps_one_part_per_series(self) -> None:
         ranked = [
@@ -96,11 +117,26 @@ class ShortlistTests(unittest.TestCase):
         self.assertFalse(matches_series_prefix("STM32G474RET3", "STM32G474RE", ["STM32H5"]))
 
 
-def _item(part: str, rpn: str, package: str, pins: int) -> dict:
+def _item(
+    part: str,
+    rpn: str,
+    package: str,
+    pins: int,
+    flash: int | None = None,
+    freq: int | None = None,
+    ram: int | None = None,
+) -> dict:
+    facts = {"package": package, "pin_count": pins}
+    if flash is not None:
+        facts["flash_kb"] = flash
+    if freq is not None:
+        facts["frequency_mhz"] = freq
+    if ram is not None:
+        facts["ram_kb"] = ram
     return {
         "part_number": part,
         "rpn": rpn,
-        "facts": {"package": package, "pin_count": pins},
+        "facts": facts,
     }
 
 

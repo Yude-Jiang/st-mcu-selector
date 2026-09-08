@@ -81,7 +81,36 @@ class NlCompareTests(unittest.TestCase):
         self.assertEqual(result["series_prefix"], ["STM32H5"])
         self.assertEqual(result["intent"], "refine_must")
         self.assertTrue(result["rerecommend"])
+        self.assertTrue(result.get("browse_not_compare"))
+        self.assertIn("系列浏览", result["answer"])
         self.assertNotIn("MK64", result["answer"])
+
+    def test_bare_competitor_with_series_browses_not_compares(self) -> None:
+        overlay = {
+            "intent": "compare",
+            "must": {},
+            "series_prefix": ["STM32H5"],
+            "competitor": {"manufacturer": "GigaDevice", "part_number": "GD32H779"},
+            "inspect_part": None,
+            "application": None,
+            "notes": [],
+            "source": "model",
+        }
+        with patch.object(nl_turn.nl_intent, "from_model", return_value=overlay):
+            result = nl_turn.handle(
+                "有没有跟GD32H779 性能接近的MCU，最好是从H5中找",
+                {},
+                None,
+                "allow_risk",
+                [],
+                [],
+            )
+        self.assertEqual(result["intent"], "refine_must")
+        self.assertEqual(result["series_prefix"], ["STM32H5"])
+        self.assertTrue(result["rerecommend"])
+        self.assertTrue(result.get("browse_not_compare"))
+        self.assertNotIn("compare", result)
+        self.assertIn("不是对标", result["answer"])
 
     def test_any_vendor_compare_uses_uploaded_specs(self) -> None:
         overlay = {

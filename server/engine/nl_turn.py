@@ -72,6 +72,8 @@ def handle(
     overlay = None
     if intent != "refuse" and not (slim and intent == "explain"):
         overlay = nl_intent.from_model(cleaned)
+    notes_extra = []
+    browse_not_compare = False
     if overlay:
         if overlay.get("intent"):
             intent = overlay["intent"]
@@ -80,8 +82,6 @@ def handle(
         if overlay.get("application"):
             application = overlay["application"]
         notes_extra = list(overlay.get("notes") or [])
-    else:
-        notes_extra = []
     if not application:
         application = nl_must.parse_with_rules(cleaned).get("application") or application
     series_prefix = nl_intent.merge_series_prefix(
@@ -94,6 +94,11 @@ def handle(
         intent = "compare"
     if nl_compare.datasheet_ready(datasheet) and intent not in {"refuse", "inspect"}:
         intent = "compare"
+    # A named STM32 outside the current shortlist is a lookup, not an essay about
+    # the previous three cards (e.g. "STM32H5E5ZJT6 为什么不是最合适的").
+    outside = _stm32_outside_shortlist(cleaned, slim)
+    if outside and intent in {"explain", "refine_must"}:
+        intent = "inspect"
     if intent == "refuse":
         return _payload(
             "refuse",
@@ -105,7 +110,7 @@ def handle(
             series_prefix=series_prefix,
         )
     if intent == "inspect":
-        part = (overlay or {}).get("inspect_part") or _stm32_part(cleaned) or ""
+        part = (overlay or {}).get("inspect_part") or outside or _stm32_part(cleaned) or ""
         if not part:
             return _clarify(current_must, application, policy, series_prefix, lang)
         result = _payload(
@@ -123,13 +128,14 @@ def handle(
         try:
             draft = nl_compare.parse_competitor(cleaned, datasheet=datasheet)
         except nl_compare.NeedSpecs:
-            # The competitor part carries no verifiable specs, so it cannot drive
-            # retrieval. Anything else the engineer gave us still can; only when there
-            # is nothing left to search on do we stop and ask for the datasheet.
-            if current_must or series_prefix:
+            # No verified competitor specs: never invent them. If the engineer named an
+            # STM32 series (or already has must), browse that series from the database
+            # and label it as browse-not-compare. Otherwise ask for a datasheet.
+            if series_prefix or current_must:
                 intent = "refine_must"
                 draft = None
-                notes_extra = notes_extra + [copy["need_specs"]]
+                browse_not_compare = True
+                notes_extra = notes_extra + [copy["series_browse"]]
             else:
                 return _payload(
                     "need_specs",
@@ -198,7 +204,7 @@ def handle(
             notes.extend(draft.get("notes") or [])
         return _payload(
             "refine_must",
-            copy["refine"],
+            copy["series_browse"] if browse_not_compare else copy["refine"],
             merged,
             application,
             policy,
@@ -206,6 +212,7 @@ def handle(
             notes=notes,
             rerecommend=True,
             series_prefix=series_prefix,
+            browse_not_compare=browse_not_compare,
         )
     if not slim:
         return _clarify(current_must, application, policy, series_prefix, lang)
@@ -242,6 +249,20 @@ def classify(text: str, candidates: list[dict[str, Any]]) -> str:
 def _stm32_part(text: str) -> str | None:
     match = STM32_RE.search(text)
     return match.group(1).upper() if match else None
+
+
+def _stm32_outside_shortlist(text: str, candidates: list[dict[str, Any]]) -> str | None:
+    """Return a named STM32 that is not one of the current shortlist cards."""
+    part = _stm32_part(text)
+    if not part:
+        return None
+    allowed = [str(item.get("part_number") or "").upper() for item in candidates if item.get("part_number")]
+    if not allowed:
+        return None
+    for token in allowed:
+        if part == token or part.startswith(token) or token.startswith(part):
+            return None
+    return part
 
 
 def _looks_like_inspect(text: str) -> bool:
@@ -328,8 +349,9 @@ def _payload(
     notes: list[str] | None = None,
     rerecommend: bool = False,
     series_prefix: list[str] | None = None,
+    browse_not_compare: bool = False,
 ) -> dict[str, Any]:
-    return {
+    payload = {
         "intent": intent,
         "answer": answer,
         "must": must,
@@ -340,3 +362,6 @@ def _payload(
         "rerecommend": rerecommend,
         "series_prefix": series_prefix or [],
     }
+    if browse_not_compare:
+        payload["browse_not_compare"] = True
+    return payload

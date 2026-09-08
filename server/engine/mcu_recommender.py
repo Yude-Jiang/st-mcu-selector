@@ -13,7 +13,14 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable
 
-from shortlist import application_label, field_label, format_points, matches_series_prefix, pick_shortlist
+from shortlist import (
+    application_label,
+    capacity_rank,
+    field_label,
+    format_points,
+    matches_series_prefix,
+    pick_shortlist,
+)
 import app_fit
 import ui_copy
 
@@ -442,7 +449,18 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
             "penalties": penalties,
         })
 
-    ranked.sort(key=lambda item: (-item["score"], item["part_number"]))
+    if request_data.get("series_prefix"):
+        # Named-series browse with little or no must otherwise ties at ~100 and
+        # RPN order surfaces entry-level 48-pin parts first. Prefer capacity.
+        ranked.sort(
+            key=lambda item: (
+                -item["score"],
+                tuple(-value for value in capacity_rank(item)),
+                item["part_number"],
+            )
+        )
+    else:
+        ranked.sort(key=lambda item: (-item["score"], item["part_number"]))
     limit = max(1, min(int(request_data.get("limit", 3)), 20))
     diversified = pick_shortlist(ranked, limit, lang)
     app_fit.annotate(diversified, request_data.get("application"), lang)
@@ -552,7 +570,16 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
             "penalties": penalties,
         })
 
-    ranked.sort(key=lambda item: (-item["score"], item["part_number"]))
+    if competitor.get("series_prefix"):
+        ranked.sort(
+            key=lambda item: (
+                -item["score"],
+                tuple(-value for value in capacity_rank(item)),
+                item["part_number"],
+            )
+        )
+    else:
+        ranked.sort(key=lambda item: (-item["score"], item["part_number"]))
     limit = max(1, min(int(competitor.get("limit", 3)), 20))
     diversified = pick_shortlist(ranked, limit, lang)
     app_fit.annotate(diversified, competitor.get("application"), lang)

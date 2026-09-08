@@ -167,6 +167,24 @@ def series_diversify_enabled() -> bool:
     return os.environ.get("ST_MCU_SERIES_DIVERSIFY", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def capacity_rank(item: dict[str, Any]) -> tuple[float, float, float, float]:
+    """Higher Flash / clock / RAM / pins first when match scores are tied."""
+    facts = item.get("facts") if isinstance(item.get("facts"), dict) else {}
+
+    def _num(key: str) -> float:
+        try:
+            return float(facts.get(key) or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    return (
+        _num("flash_kb"),
+        _num("frequency_mhz"),
+        _num("ram_kb"),
+        _num("pin_count"),
+    )
+
+
 def pick_shortlist(ranked: list[dict[str, Any]], limit: int, lang: str = "zh") -> list[dict[str, Any]]:
     if series_diversify_enabled():
         return diversify_by_series(ranked, limit, lang)

@@ -18,6 +18,7 @@ import nl_compare  # noqa: E402
 import nl_datasheet  # noqa: E402
 import nl_must  # noqa: E402
 import nl_turn  # noqa: E402
+import ui_copy  # noqa: E402
 
 router = APIRouter()
 
@@ -71,12 +72,17 @@ def _attach_shortlist(result: dict, shortlist: dict, lang: str = "zh") -> dict:
     if result.get("intent") == "compare" and result.get("compare"):
         result["answer"] = nl_compare.explain_compare(result["compare"], shortlist, lang=lang)
     else:
-        result["answer"] = nl_brief.for_shortlist(
+        brief = nl_brief.for_shortlist(
             result["recommendations"],
             lang=lang,
             application=result.get("application"),
             series_prefix=result.get("series_prefix"),
         )
+        if result.get("browse_not_compare"):
+            lead = ui_copy.turn(lang)["series_browse"]
+            result["answer"] = f"{lead}\n\n{brief}"
+        else:
+            result["answer"] = brief
     return result
 
 

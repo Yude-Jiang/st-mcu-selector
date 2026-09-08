@@ -94,6 +94,31 @@ class NlTurnTests(unittest.TestCase):
         self.assertEqual(result["compare"]["application"], "motor_control")
         self.assertEqual(result["compare"]["specs"]["frequency_mhz"], 600)
 
+    def test_followup_outside_shortlist_is_inspect(self) -> None:
+        result = nl_turn.handle(
+            "STM32H5E5ZJT6 为什么不是最合适的",
+            {},
+            None,
+            "allow_risk",
+            self.candidates,
+            [],
+        )
+        self.assertEqual(result["intent"], "inspect")
+        self.assertEqual(result["inspect_part"], "STM32H5E5ZJT6")
+        self.assertFalse(result["rerecommend"])
+
+    def test_followup_named_shortlist_part_still_explains(self) -> None:
+        result = nl_turn.handle(
+            "STM32G474RET3 和其他两颗差别在哪",
+            {},
+            None,
+            "allow_risk",
+            self.candidates,
+            [],
+        )
+        self.assertEqual(result["intent"], "explain")
+        self.assertIn("STM32G474RET3", result["answer"])
+
 
 if __name__ == "__main__":
     unittest.main()
