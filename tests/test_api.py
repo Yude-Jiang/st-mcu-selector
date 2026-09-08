@@ -235,6 +235,18 @@ class SelectionApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["found"])
 
+    def test_inspect_page_renders_spec_table(self) -> None:
+        facts = Path(ROOT / "web" / "facts.js").read_text(encoding="utf-8")
+        app = Path(ROOT / "web" / "app.js").read_text(encoding="utf-8")
+        extra = Path(ROOT / "web" / "copy-extra.js").read_text(encoding="utf-8")
+        engine = Path(ROOT / "server" / "engine" / "mcu_recommender.py").read_text(encoding="utf-8")
+        self.assertIn("inspectCardHtml", facts)
+        self.assertIn("inspect-table", facts)
+        self.assertIn("inspectCardHtml(payload)", app)
+        self.assertIn("inspect.table", extra)
+        self.assertIn("_linked_cpns", engine)
+        self.assertIn("sample_orderable", engine)
+
     def test_health_reports_llm_without_exposing_key(self) -> None:
         os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
         os.environ.pop("DEEPSEEK_API_KEY", None)

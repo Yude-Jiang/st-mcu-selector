@@ -107,25 +107,53 @@ function matchLines(item, mode) {
 function inspectModel(payload) {
   const facts = payload.normalized || {};
   const rpn = payload.rpn || {};
-  const partNumber = payload.part_number || "";
-  const groups = SPEC_GROUP_KEYS.map((group) => ({
-    title: t(group.titleKey),
-    items: factEntries(facts, group.keys),
-  })).filter((group) => group.items.length > 0);
-  const lists = LIST_KEY_DEFS.map((entry) => ({
-    title: t(entry.titleKey),
-    items: hasFactValue(facts[entry.key]) ? splitFactList(facts[entry.key]) : [],
-  })).filter((entry) => entry.items.length > 0);
+  const partNumber = payload.part_number || payload.queried || payload.reference || "";
   return {
     partNumber,
     stUrl: stProductUrl(partNumber, rpn.rpn),
     status: lifecycleStatus(rpn.marketingStatus),
     description: rpn.description || payload.reference || "",
-    identity: factEntries(facts, IDENTITY_KEYS),
-    groups,
-    lists,
+    tableRows: factEntries(facts),
+    orderables: payload.orderables || [],
+    sampleNote: payload.sample_orderable
+      ? t("inspect.fromOrderable", { part: payload.sample_orderable })
+      : "",
     disclaimer: t("inspect.disclaimer"),
   };
+}
+
+function inspectSpecTable(rows) {
+  if (!rows.length) return "";
+  const body = rows
+    .map((row) => `<tr><th>${escapeHtml(row.label)}</th><td>${escapeHtml(row.value)}</td></tr>`)
+    .join("");
+  return `<div class="inspect-table-wrap">
+    <h3 class="inspect-table-title">${escapeHtml(t("inspect.table"))}</h3>
+    <table class="inspect-table">
+      <thead><tr><th>${escapeHtml(t("table.item"))}</th><th>${escapeHtml(t("inspect.value"))}</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>`;
+}
+
+function inspectCardHtml(payload) {
+  const view = inspectModel(payload);
+  const packages = view.orderables.length
+    ? `<p class="other-packages"><b>${escapeHtml(t("inspect.orderables"))}</b><br>${view.orderables.map((line) => escapeHtml(line)).join("<br>")}</p>`
+    : "";
+  return `
+    <article class="card inspect-card">
+      <div class="card-head">
+        <strong>${escapeHtml(view.partNumber)}</strong>
+        <a class="st-link" href="${escapeHtml(view.stUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("stCom"))}</a>
+      </div>
+      <p class="status-banner is-${escapeHtml(view.status.kind)}">${escapeHtml(view.status.text)}</p>
+      ${view.description ? `<p class="lead-copy">${escapeHtml(view.description)}</p>` : ""}
+      ${view.sampleNote ? `<p class="decision">${escapeHtml(view.sampleNote)}</p>` : ""}
+      ${inspectSpecTable(view.tableRows)}
+      ${packages}
+      <p class="meta">${escapeHtml(view.disclaimer)}</p>
+    </article>`;
 }
 
 function shortlistModel(item, index, mode) {

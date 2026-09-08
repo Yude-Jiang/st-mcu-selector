@@ -206,6 +206,45 @@
   padding: 10px 16px 14px;
 }
 
+.inspect-table-wrap {
+  background: var(--st-white);
+  margin: 12px 0 0;
+  overflow-x: auto;
+}
+
+.inspect-table-title {
+  background: var(--st-navy);
+  color: var(--st-white);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 16px;
+}
+
+.inspect-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.inspect-table th,
+.inspect-table td {
+  border: 1px solid var(--st-gray-2);
+  padding: 8px 10px;
+  text-align: left;
+  color: var(--st-navy);
+}
+
+.inspect-table thead th {
+  background: var(--st-navy);
+  color: var(--st-white);
+}
+
+.inspect-table tbody th {
+  background: var(--st-gray-1);
+  font-weight: 700;
+  width: 40%;
+}
+
 .brief {
   background: var(--st-white);
   margin-bottom: 16px;

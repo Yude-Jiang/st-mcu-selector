@@ -17,6 +17,11 @@ Object.assign(COPY.zh, {
   "table.note": "数字来自竞品规格与公开 MCU 数据库。匹配度是筛后接近程度，不是性能对等。禁止把这里的倍数当成 CoreMark。",
   "app.banner": "应用：{app}。工程判断看库内电机定时器、HRTIM、通信和模拟字段，不是 CubeMX 签核。",
   "score.closeness": "匹配度 {score}（系列内接近，不是性能对等）",
+  "inspect.table": "库内规格",
+  "inspect.value": "值",
+  "inspect.other": "其他库内字段",
+  "inspect.orderables": "同系列订货号",
+  "inspect.fromOrderable": "系列型号本身往往没有封装级字段。下表规格来自订货号 {part}，须再核对该订货号 datasheet。",
 });
 Object.assign(COPY.en, {
   "gate.title": "MCU Selector",
@@ -37,4 +42,9 @@ Object.assign(COPY.en, {
   "table.note": "Numbers come from competitor specs and the public MCU database. Match score is closeness after the filter, not performance parity. Do not read these ratios as CoreMark.",
   "app.banner": "Application: {app}. Engineering judgment uses library motor timers, HRTIM, comms, and analog fields — not a CubeMX sign-off.",
   "score.closeness": "Match {score} (in-series closeness, not performance parity)",
+  "inspect.table": "Library specs",
+  "inspect.value": "Value",
+  "inspect.other": "Other library fields",
+  "inspect.orderables": "Orderable part numbers in this type",
+  "inspect.fromOrderable": "The series type often has no package-level fields. Specs below come from orderable PN {part}; confirm that datasheet.",
 });

@@ -76,34 +76,6 @@ function listBlock(title, items) {
   return `<div><b>${title}</b><br>${items.map((item) => escapeHtml(item)).join("<br>")}</div>`;
 }
 
-function identityBlock(rows) {
-  if (!rows.length) return "";
-  const cells = rows
-    .map((row) => `<div><dt>${escapeHtml(row.label)}</dt><dd>${escapeHtml(row.value)}</dd></div>`)
-    .join("");
-  return `<dl class="identity">${cells}</dl>`;
-}
-
-function specGroups(groups) {
-  return groups
-    .map((group) => {
-      const chips = group.items
-        .map((item) => `<span>${escapeHtml(item.label)}: ${escapeHtml(item.value)}</span>`)
-        .join("");
-      return `<section class="spec-group"><h3>${escapeHtml(group.title)}</h3><div class="facts">${chips}</div></section>`;
-    })
-    .join("");
-}
-
-function capabilityLists(lists) {
-  return lists
-    .map((entry) => {
-      const items = entry.items.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-      return `<section class="spec-group"><h3>${escapeHtml(entry.title)}</h3><ul class="cap-list">${items}</ul></section>`;
-    })
-    .join("");
-}
-
 function compareLeadHtml(payload) {
   const competitor = payload && payload.compare;
   if (!competitor || payload.mode !== "competitor") return "";
@@ -161,20 +133,7 @@ function paintInspect(payload) {
     $("results").innerHTML = `<p class='meta'>${escapeHtml(t("notFound", { part: payload.part_number }))}${near}</p>`;
     return;
   }
-  const view = inspectModel(payload);
-  $("results").innerHTML = `
-    <article class="card inspect-card">
-      <div class="card-head">
-        <strong>${escapeHtml(view.partNumber)}</strong>
-        <a class="st-link" href="${escapeHtml(view.stUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("stCom"))}</a>
-      </div>
-      <p class="status-banner is-${escapeHtml(view.status.kind)}">${escapeHtml(view.status.text)}</p>
-      ${view.description ? `<p class="lead-copy">${escapeHtml(view.description)}</p>` : ""}
-      ${identityBlock(view.identity)}
-      ${specGroups(view.groups)}
-      ${capabilityLists(view.lists)}
-      <p class="meta">${escapeHtml(view.disclaimer)}</p>
-    </article>`;
+  $("results").innerHTML = inspectCardHtml(payload);
 }
 
 function renderCards(payload) {

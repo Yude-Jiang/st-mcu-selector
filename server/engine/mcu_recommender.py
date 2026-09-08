@@ -567,6 +567,31 @@ def compare(database: Path, competitor: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _attribute_rows(db: sqlite3.Connection, table: str, owner_column: str, owner_id: int) -> dict[str, dict[str, Any]]:
+    rows: dict[str, dict[str, Any]] = {}
+    for row in db.execute(
+        "SELECT a.name,a.sourceName,a.unit,a.type,v.strValue,v.numValue "
+        f"FROM {table} v JOIN attribute a ON a.id=v.attribute_id WHERE v.{owner_column}=?",
+        (owner_id,),
+    ):
+        rows[row["name"]] = {
+            "value": parse_scalar(row["strValue"], row["numValue"]),
+            "label": row["sourceName"],
+            "unit": row["unit"],
+            "type": row["type"],
+            "source": "cpn" if "cpn" in table else "rpn",
+        }
+    return rows
+
+
+def _linked_cpns(db: sqlite3.Connection, rpn_id: int) -> list[Any]:
+    return db.execute(
+        "SELECT c.* FROM cpn c JOIN rpn_has_cpn rc ON rc.cpn_id=c.id "
+        "WHERE rc.rpn_id=? ORDER BY LENGTH(c.cpn), c.cpn",
+        (rpn_id,),
+    ).fetchall()
+
+
 def inspect_part(database: Path, part_number: str) -> dict[str, Any]:
     target = part_number.strip().upper()
     with connect_readonly(database) as db:
@@ -586,36 +611,38 @@ def inspect_part(database: Path, part_number: str) -> dict[str, Any]:
             )]
             return {"found": False, "part_number": target, "suggestions": suggestions}
 
+        orderables: list[str] = []
+        sample_orderable = None
+        if rpn:
+            linked = _linked_cpns(db, rpn["id"])
+            orderables = [row["cpn"] for row in linked[:12]]
+            if cpn is None and linked:
+                cpn = linked[0]
+                sample_orderable = cpn["cpn"]
+            elif cpn:
+                sample_orderable = None
+                orderables = [item for item in orderables if item.upper() != str(cpn["cpn"]).upper()]
+
         attributes: dict[str, dict[str, Any]] = {}
         if rpn:
-            for row in db.execute(
-                "SELECT a.name,a.sourceName,a.unit,a.type,v.strValue,v.numValue "
-                "FROM rpn_has_attribute v JOIN attribute a ON a.id=v.attribute_id WHERE v.rpn_id=?",
-                (rpn["id"],),
-            ):
-                attributes[row["name"]] = {
-                    "value": parse_scalar(row["strValue"], row["numValue"]),
-                    "label": row["sourceName"], "unit": row["unit"], "type": row["type"],
-                    "source": "rpn",
-                }
+            attributes.update(_attribute_rows(db, "rpn_has_attribute", "rpn_id", rpn["id"]))
         if cpn:
-            for row in db.execute(
-                "SELECT a.name,a.sourceName,a.unit,a.type,v.strValue,v.numValue "
-                "FROM cpn_has_attribute v JOIN attribute a ON a.id=v.attribute_id WHERE v.cpn_id=?",
-                (cpn["id"],),
-            ):
-                attributes[row["name"]] = {
-                    "value": parse_scalar(row["strValue"], row["numValue"]),
-                    "label": row["sourceName"], "unit": row["unit"], "type": row["type"],
-                    "source": "cpn",
-                }
+            attributes.update(_attribute_rows(db, "cpn_has_attribute", "cpn_id", cpn["id"]))
         raw = {key: value["value"] for key, value in attributes.items()}
+        fields = derive_fields(raw)
+        if sample_orderable:
+            display = rpn["rpn"] if rpn else target
+        else:
+            display = (cpn["cpn"] if cpn else None) or (rpn["rpn"] if rpn else target)
         return {
             "found": True,
-            "part_number": cpn["cpn"] if cpn else None,
+            "part_number": display,
+            "queried": target,
+            "sample_orderable": sample_orderable,
+            "orderables": orderables,
             "reference": (cpn["refname"] if cpn else None) or (rpn["rpn"] if rpn else None),
             "rpn": dict(rpn) if rpn else None,
-            "normalized": derive_fields(raw),
+            "normalized": {key: value for key, value in fields.items() if value not in (None, "", [])},
             "attributes": attributes,
         }
 
