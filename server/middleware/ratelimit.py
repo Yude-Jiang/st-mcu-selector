@@ -32,6 +32,9 @@ COSTLY_PATHS = frozenset({
 })
 # Endpoints that only read the local SQLite database.
 CHEAP_PATHS = frozenset({
+    # db-freshness reaches sw-center.st.com, so it must never be exempt: an open
+    # endpoint that proxies to ST is a way to hammer ST through us.
+    "/api/db-freshness",
     "/api/recommend",
     "/api/compare",
     "/api/inspect",

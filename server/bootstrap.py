@@ -13,6 +13,7 @@ import readiness
 if str(engine_adapter.ENGINE_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(engine_adapter.ENGINE_SCRIPTS))
 import db_cache
+import db_refresh
 
 DEFAULT_DB_URL = "https://sw-center.st.com/packs/cube-finder-db/cube-finder-db.zip"
 
@@ -49,6 +50,11 @@ def _load_database() -> None:
     except Exception as exc:
         readiness.mark_error(exc)
         print(f"Database startup failed: {exc}", file=sys.stderr)
+        return
+    # One extra HEAD so /api/health can answer "are we current?" from the first request
+    # onwards, instead of staying blank until the first periodic check fires.
+    db_refresh.probe_upstream()
+    db_refresh.start(on_reload=readiness.mark_ready)
 
 
 def main() -> None:
