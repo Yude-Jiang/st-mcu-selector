@@ -1,14 +1,23 @@
 from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 import engine_adapter
-import nl_must
 import readiness
+
+# engine/ has to be on the path before the modules below import. engine_adapter happens
+# to add it as a side effect, but relying on that import order is how this file broke.
+ENGINE = Path(__file__).resolve().parents[1] / "engine"
+if str(ENGINE) not in sys.path:
+    sys.path.insert(0, str(ENGINE))
+import db_refresh  # noqa: E402
+import nl_must  # noqa: E402
 
 router = APIRouter()
 
@@ -18,6 +27,12 @@ def _llm_status() -> dict[str, Any]:
         "configured": nl_must.llm_configured(),
         "model": os.environ.get("ST_MCU_LLM_MODEL", "deepseek-chat"),
     }
+
+
+def _freshness(cache: dict[str, Any] | None) -> dict[str, Any]:
+    """Freshness from the last recorded probe. Never calls ST: the page polls this
+    endpoint every 8s and it is exempt from rate limiting."""
+    return db_refresh.snapshot((cache or {}).get("fingerprint"))
 
 
 def _not_ready_payload() -> dict[str, Any]:
@@ -51,6 +66,7 @@ def api_health() -> JSONResponse:
         payload["llm"] = _llm_status()
         if snap.get("cache"):
             payload["cache"] = snap["cache"]
+        payload["freshness"] = _freshness(snap.get("cache"))
         return JSONResponse(payload)
     except Exception as exc:
         return JSONResponse(
@@ -69,3 +85,24 @@ def database() -> JSONResponse:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/api/db-freshness")
+def db_freshness() -> JSONResponse:
+    """Ask ST right now whether our database is the current bundle.
+
+    Separate from /api/health on purpose: this one reaches the network, so it is rate
+    limited, while health stays exempt and free for the page's 8s poll.
+    """
+    cache = readiness.snapshot().get("cache") or {}
+    loaded = cache.get("fingerprint")
+    upstream = db_refresh.probe_upstream()
+    payload: dict[str, Any] = {
+        "loaded_fingerprint": loaded,
+        "upstream_fingerprint": upstream,
+        **db_refresh.snapshot(loaded),
+    }
+    if upstream is None:
+        payload["up_to_date"] = None
+        return JSONResponse(payload, status_code=503)
+    return JSONResponse(payload)

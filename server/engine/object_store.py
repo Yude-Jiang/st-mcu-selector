@@ -3,7 +3,27 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
+
+
+def install_atomically(dest: Path, writer: Callable[[Path], None]) -> None:
+    """Write to a sibling temp file, then os.replace onto dest.
+
+    An open SQLite connection keeps the old inode; in-place download_to_filename
+    would truncate the file those queries are still reading.
+    """
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    temporary = dest.with_name(f".{dest.name}.{os.getpid()}.tmp")
+    try:
+        writer(temporary)
+        os.replace(temporary, dest)
+    except Exception:
+        try:
+            if temporary.is_file():
+                temporary.unlink()
+        except OSError:
+            pass
+        raise
 
 
 class ObjectStore(Protocol):
@@ -62,8 +82,9 @@ class OssObjectStore:
     def download_to(self, key: str, dest: Path) -> None:
         if not self.exists(key):
             raise FileNotFoundError(f"OSS object missing: {key}")
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        self._bucket.get_object_to_file(key, str(dest))
+        install_atomically(
+            dest, lambda path: self._bucket.get_object_to_file(key, str(path))
+        )
 
     def upload_from(self, key: str, src: Path) -> None:
         self._bucket.put_object_from_file(key, str(src))
@@ -94,8 +115,7 @@ class GcsObjectStore:
         blob = self._bucket.blob(key)
         if not blob.exists():
             raise FileNotFoundError(f"GCS object missing: {key}")
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        blob.download_to_filename(str(dest))
+        install_atomically(dest, lambda path: blob.download_to_filename(str(path)))
 
     def upload_from(self, key: str, src: Path) -> None:
         self._bucket.blob(key).upload_from_filename(str(src))

@@ -13,6 +13,7 @@ import readiness
 if str(engine_adapter.ENGINE_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(engine_adapter.ENGINE_SCRIPTS))
 import db_cache
+import db_refresh
 
 DEFAULT_DB_URL = "https://sw-center.st.com/packs/cube-finder-db/cube-finder-db.zip"
 
@@ -25,16 +26,22 @@ def configured_database() -> Path:
     return data_dir / "cube-finder-db.db"
 
 
-def ensure_database() -> db_cache.CacheResult:
+def ensure_database(mode: str | None = None) -> db_cache.CacheResult:
     database = configured_database()
-    mode = os.environ.get("ST_MCU_AUTO_UPDATE", "if_missing").strip().lower()
+    chosen = (mode or os.environ.get("ST_MCU_AUTO_UPDATE", "if_missing")).strip().lower()
     result = db_cache.ensure(
         database,
         url=os.environ.get("ST_MCU_DB_URL", DEFAULT_DB_URL),
-        mode=mode,
+        mode=chosen,
     )
     os.environ["ST_MCU_DB"] = str(result.database)
     return result
+
+
+def _loaded_fingerprint() -> str | None:
+    cache = readiness.snapshot().get("cache") or {}
+    value = cache.get("fingerprint")
+    return str(value) if value else None
 
 
 def _load_database() -> None:
@@ -49,6 +56,11 @@ def _load_database() -> None:
     except Exception as exc:
         readiness.mark_error(exc)
         print(f"Database startup failed: {exc}", file=sys.stderr)
+        return
+    # One extra HEAD so /api/health can answer "are we current?" from the first request
+    # onwards, instead of staying blank until the first periodic check fires.
+    db_refresh.probe_upstream()
+    db_refresh.start(on_reload=readiness.mark_ready, loaded_fn=_loaded_fingerprint)
 
 
 def main() -> None:

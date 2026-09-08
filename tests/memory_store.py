@@ -22,8 +22,10 @@ class MemoryObjectStore:
     def download_to(self, key: str, dest: Path) -> None:
         if key not in self.files:
             raise FileNotFoundError(f"OSS object missing: {key}")
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(self.files[key])
+        payload = self.files[key]
+        from object_store import install_atomically
+
+        install_atomically(dest, lambda path: path.write_bytes(payload))
 
     def upload_from(self, key: str, src: Path) -> None:
         self.files[key] = src.read_bytes()
