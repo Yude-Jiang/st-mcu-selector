@@ -40,12 +40,14 @@
 .field select,
 .field textarea {
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 14px;
+  /* Below 16px iOS zooms the whole page on focus; the mini program web-view makes
+     that a routine annoyance rather than an edge case. */
+  font-size: 16px;
   font-weight: 400;
   color: var(--st-navy);
   border: 1px solid var(--st-gray-2);
   background: var(--st-white);
-  min-height: 40px;
+  min-height: 44px;
   padding: 8px 10px;
 }
 
@@ -73,7 +75,7 @@
   border: 0;
   background: var(--st-navy);
   color: var(--st-white);
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 16px;
   margin-top: 8px;
   cursor: pointer;
