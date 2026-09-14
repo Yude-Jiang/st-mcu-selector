@@ -37,6 +37,16 @@ body {
   padding: 24px;
 }
 
+/* Embedded in the mini program shell: the gate must not paint even for the moment
+   the blocking scripts ahead of gate.js are still loading. */
+:root[data-embed="miniprogram"] #gate {
+  display: none;
+}
+
+:root[data-embed="miniprogram"] #root[hidden] {
+  display: block;
+}
+
 .gate[hidden] {
   display: none;
 }

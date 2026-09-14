@@ -10,6 +10,16 @@
   <meta property="og:description" content="ST MCU Selector：按必须满足的规格、已核实的竞品参数或 STM32 订货号，从意法半导体公开 MCU 数据库给出最多三个候选。结果是短名单，设计前需核对 datasheet。">
   <meta name="twitter:title" content="ST MCU Selector | STMicroelectronics">
   <meta name="twitter:description" content="ST MCU Selector：按必须满足的规格、已核实的竞品参数或 STM32 订货号，从意法半导体公开 MCU 数据库给出最多三个候选。结果是短名单，设计前需核对 datasheet。">
+  <script>
+    // Runs before the body is parsed so the embedded case never paints the gate.
+    // gate.js still does the real work; this only stops the flash while the three
+    // blocking scripts ahead of it are fetched, which is visible on a phone.
+    try {
+      if (new URLSearchParams(location.search).get("embed") === "miniprogram") {
+        document.documentElement.setAttribute("data-embed", "miniprogram");
+      }
+    } catch (error) { /* older webview without URLSearchParams: gate.js still handles it */ }
+  </script>
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./forms.css">
   <link rel="stylesheet" href="./chat.css">

@@ -1,4 +1,18 @@
 const GATE_KEY = "st-mcu-gate-email";
+// The mini program is already an ST-internal surface, and its web-view starts a fresh
+// session on every launch, so the gate would ask for the same address every time it
+// opens. The page skips it when the shell says it is the embedder. This widens nothing:
+// the gate only hides #root in the browser and was never access control.
+const EMBED_PARAM = "embed";
+const EMBED_MINIPROGRAM = "miniprogram";
+
+function isEmbedded() {
+  try {
+    return new URLSearchParams(window.location.search).get(EMBED_PARAM) === EMBED_MINIPROGRAM;
+  } catch (error) {
+    return false;
+  }
+}
 
 function isStEmail(value) {
   const email = String(value || "").trim().toLowerCase();
@@ -77,6 +91,11 @@ function bindGate() {
 }
 
 function startGate() {
+  if (isEmbedded()) {
+    // Nothing else to wire: the gate markup never becomes visible in this mode.
+    showMainApp();
+    return;
+  }
   if (isStEmail(readGateEmail())) {
     showMainApp();
   } else {

@@ -1,5 +1,10 @@
 const { webBase, env } = require("../../config");
 
+// Tells the page it is running inside this shell so it skips the @st.com gate. The
+// mini program is already internal-only, and its web-view would otherwise ask for the
+// address on every launch because sessionStorage does not survive a new web-view.
+const EMBED_QUERY = "embed=miniprogram";
+
 // web-view fills the page and cannot be mixed with other components, so the error
 // state replaces it entirely rather than overlaying it.
 Page({
@@ -24,7 +29,8 @@ Page({
       });
       return;
     }
-    this.setData({ url: base, failed: false, hint: "" });
+    const separator = base.indexOf("?") === -1 ? "?" : "&";
+    this.setData({ url: `${base}${separator}${EMBED_QUERY}`, failed: false, hint: "" });
   },
 
   onWebViewLoad() {
