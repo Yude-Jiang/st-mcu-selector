@@ -17,4 +17,7 @@
 - [x] 器件库新鲜度：后台按周重查上游 ETag，`/api/db-freshness` 可随时确认是否落后（`db_refresh.py`）
 - [ ] Cloud Shell：建 GCS 桶并 `gcloud run deploy`（见 `docs/cloud-run/`）
 - [x] 微信 request 合法域名定为 `mp.microelectronics.com`（已 ICP，阿里云）
+- [x] 小程序改为 web-view 内嵌同一个网页，两端前端不再分叉（`pages/web/index`）
 - [ ] 按 `docs/aliyun/sae-bind-domain.md`：ACR 推镜像、建 SAE、`mp.microelectronics.com` 整站指到该应用
+- [ ] 公众平台配**业务域名** `mp.microelectronics.com` + 校验文件放域名根目录（web-view 的前置）
+- [ ] `project.config.json` 换真实 AppID、`config.js` 切 `production`，上传体验版

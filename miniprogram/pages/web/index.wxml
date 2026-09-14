@@ -1,0 +1,18 @@
+<web-view
+  wx:if="{{url && !failed}}"
+  src="{{url}}"
+  bindload="onWebViewLoad"
+  binderror="onWebViewError"
+/>
+
+<view wx:else class="fallback">
+  <view class="title-bar">MCU Selector</view>
+  <view class="fallback-body">
+    <text class="fallback-hint">{{hint}}</text>
+    <text class="fallback-url">{{url}}</text>
+    <view class="fallback-actions">
+      <button class="btn-primary" bindtap="onRetry">重试</button>
+      <button class="btn-plain" bindtap="onCopyUrl">复制网址</button>
+    </view>
+  </view>
+</view>

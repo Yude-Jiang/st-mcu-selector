@@ -1,0 +1,62 @@
+/* ST 色板锁定；黄底配深蓝字，禁止白字配黄底 */
+.fallback {
+  min-height: 100vh;
+  background: #eeeff1;
+}
+
+.title-bar {
+  background: #ffd200;
+  color: #03234b;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 20rpx 32rpx;
+}
+
+.fallback-body {
+  padding: 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.fallback-hint {
+  color: #03234b;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.fallback-url {
+  color: #425978;
+  font-size: 24rpx;
+  word-break: break-all;
+  background: #ffffff;
+  padding: 20rpx;
+}
+
+.fallback-actions {
+  display: flex;
+  gap: 20rpx;
+  flex-wrap: wrap;
+}
+
+/* 触摸目标不低于 88rpx（44px） */
+.btn-primary,
+.btn-plain {
+  margin: 0;
+  min-height: 88rpx;
+  line-height: 88rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  border-radius: 0;
+}
+
+.btn-primary {
+  background: #ffd200;
+  color: #03234b;
+}
+
+.btn-plain {
+  background: #03234b;
+  color: #ffffff;
+}

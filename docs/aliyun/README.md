@@ -11,13 +11,35 @@
 
 Cloud Run / GCS 说明见 [`../cloud-run/README.md`](../cloud-run/README.md)。
 
-## 微信开发者工具
+## 小程序形态：web-view 内嵌同一个网页
+
+首页 `pages/web/index` 是一个 `web-view`，直接内嵌 `webBase` 指向的网页，**和 Cloud Run / SAE 上跑的是同一套前端**。这样两端不会再各写一份 UI 然后慢慢跑偏。原生表单页 `pages/index/index` 仍保留在 `app.json` 里，把它挪回数组第一位就切回去，不用重写。
+
+### 两条域名配置是独立的，别混
+
+| 配置项 | 用途 | 公众平台位置 |
+|--------|------|--------------|
+| `apiBase` → request 合法域名 | `wx.request` 调 `/api/*` | 开发管理 → 开发设置 → 服务器域名 |
+| `webBase` → **业务域名** | `web-view` 内嵌网页 | 开发管理 → 开发设置 → **业务域名** |
+
+业务域名要单独配，而且**必须把校验文件下载下来放到域名根目录**（`https://mp.microelectronics.com/<校验文件名>.txt` 能直接访问才算通过）。只填 host，不带 `https://` 和路径。
+
+SAE 侧要保证这个校验文件可访问：如果只反代了 `/api/*` 和 `/healthz`，校验文件会 404，业务域名就配不上。
+
+## 微信开发者工具（本地验证）
 
 1. 导入仓库根目录，`project.config.json` 已指向 `miniprogram/`
-2. 详情 → 本地设置：勾选不校验合法域名、web-view、TLS
-3. `miniprogram/config.js` 开发环境默认 `http://127.0.0.1:8080`
-4. 真机预览把 `apiBase` 改成电脑局域网 IP，例如 `http://192.168.1.8:8080`
-5. 把 `appid` 换成你们的小程序 AppID 后再上传体验版
+2. 详情 → 本地设置：勾选「不校验合法域名、web-view（业务域名）、TLS 版本以及 HTTPS 证书」
+3. `miniprogram/config.js` 的 `develop` 里 `web` 指向 Cloud Run，工具里能直接内嵌
+4. **真机预览内嵌不了 Cloud Run**——`*.run.app` 没有 ICP 备案，配不成业务域名。真机要等 `mp.microelectronics.com` 上线并配好业务域名
+5. `apiBase` 的 `develop` 是 `http://127.0.0.1:8080`；真机预览要改成电脑局域网 IP，例如 `http://192.168.1.8:8080`
+6. 把 `appid` 从 `touristappid` 换成真实 AppID 后才能上传体验版（游客态不能上传）
+
+### web-view 的几个硬约束
+
+- 一个页面里 `web-view` 会占满，不能和别的组件混排。所以加载失败时是整页替换成原生兜底视图，不是浮层
+- 只能内嵌 `https`，`http` 一律不行（工具里也不行）
+- 网页里想调 `wx.miniProgram.*`（如 `navigateBack`）要先引微信的 JS-SDK；目前是纯展示，没引
 
 ## OSS 缓存桶（冷启动）
 
@@ -54,7 +76,8 @@ bash scripts/aliyun-deploy.sh production
 
 1. SAE / SLB / 网关把 `mp.microelectronics.com` 指到本服务（若域名上已有站点，只反代 `/api/*` 与 `/healthz`）
 2. 微信公众平台 request 合法域名：`mp.microelectronics.com`
-3. 体验版把 `miniprogram/config.js` 的 `ENV` 改为 `production`（已指向 `https://mp.microelectronics.com`）
-4. 上传小程序代码
+3. 微信公众平台 **业务域名**：`mp.microelectronics.com`，并把校验文件放到域名根目录
+4. 体验版把 `miniprogram/config.js` 的 `ENV` 改为 `production`（`apiBase` 与 `webBase` 一起切到 `https://mp.microelectronics.com`）
+5. 上传小程序代码
 
 Health: `/healthz`（器件库未就绪时 503）。Smoke 与回滚见 [deploy-runbook.md](./deploy-runbook.md)。
