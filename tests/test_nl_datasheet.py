@@ -103,7 +103,8 @@ class NlDatasheetTests(unittest.TestCase):
         with patch.object(nl_datasheet, "extract_pdf_text", return_value=EXCERPT):
             with self.assertRaises(ValueError) as ctx:
                 nl_datasheet.parse_bytes(b"%PDF-1.4 excerpt", "a.pdf")
-        self.assertIn("DeepSeek", str(ctx.exception))
+        self.assertIn("AI", str(ctx.exception))
+        self.assertNotIn("DeepSeek", str(ctx.exception))
 
 
 if __name__ == "__main__":

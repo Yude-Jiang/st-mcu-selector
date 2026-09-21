@@ -63,6 +63,8 @@ class SelectionApiTests(unittest.TestCase):
         self.assertIn("XXX", response.text)
         self.assertNotIn("GD32H779", response.text)
         self.assertNotIn("GD32H779", copy)
+        self.assertNotIn("DeepSeek", copy)
+        self.assertIn("AI 会把这句话", copy)
         self.assertNotIn("替换 NXP MK64FN1M0VLL12", response.text)
         self.assertNotIn("填入下方表单", response.text)
         self.assertNotIn("给出短名单", response.text)

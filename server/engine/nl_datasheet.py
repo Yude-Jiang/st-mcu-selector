@@ -16,7 +16,7 @@ MAX_PAGES = 15
 MAX_CHARS = 12000
 MIN_CHARS = 80
 PDF_SCAN_ERROR = "无法从 PDF 抽出文字。请换可复制文本的电子版，或把关键规格粘进输入框。"
-LLM_MISSING = "解析规格书需要 DeepSeek。未配置时请把主频、Flash、封装写进输入框。"
+LLM_MISSING = "解析规格书需要 AI。未启用时请把主频、Flash、封装写进输入框。"
 EXTRACT_PROMPT = """你从用户上传的 MCU datasheet 摘录中抽取规格，供 STM32 对照检索使用。
 只输出 JSON。禁止任何 STM32 订货号。禁止价格、交期、引脚兼容。
 只填写摘录里能核对的数字，禁止凭记忆补全。不确定的键不要写。
