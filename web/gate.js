@@ -77,6 +77,10 @@ function bindGate() {
 }
 
 function startGate() {
+  if (window.ST_MCU_MP) {
+    showMainApp();
+    return;
+  }
   if (isStEmail(readGateEmail())) {
     showMainApp();
   } else {

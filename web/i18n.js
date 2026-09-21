@@ -109,7 +109,7 @@ function bindLangTabs() {
   });
 }
 
-currentLang = readStoredLang();
-bindLangTabs();
+currentLang = window.ST_MCU_MP ? "zh" : readStoredLang();
+if (!window.ST_MCU_MP) bindLangTabs();
 applyTdk();
 applyStaticCopy();

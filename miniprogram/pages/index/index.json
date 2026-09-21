@@ -1,4 +1,4 @@
 {
   "navigationBarTitleText": "ST MCU Selector",
-  "usingComponents": {}
+  "disableScroll": true
 }

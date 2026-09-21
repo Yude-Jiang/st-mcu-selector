@@ -327,18 +327,27 @@ class SelectionApiTests(unittest.TestCase):
         self.assertNotIn("MK64", answer)
         self.assertNotIn("NXP MK64", answer)
 
-    def test_miniprogram_calls_same_skill_paths(self) -> None:
-        text = Path(ROOT / "miniprogram" / "utils" / "api.js").read_text(encoding="utf-8")
-        self.assertIn("/api/recommend", text)
-        self.assertIn("/api/compare", text)
-        self.assertIn("/api/inspect", text)
-        self.assertIn("/api/health", text)
-        self.assertIn("/api/parse-requirements", text)
+    def test_miniprogram_webview_opens_mp_page(self) -> None:
+        cfg = Path(ROOT / "miniprogram" / "config.js").read_text(encoding="utf-8")
+        wxml = Path(ROOT / "miniprogram" / "pages" / "index" / "index.wxml").read_text(encoding="utf-8")
+        self.assertIn("<web-view", wxml)
+        self.assertIn("/?mp=1", cfg)
+        html = self.client.get("/?mp=1").text
+        self.assertIn('src="./mp.js"', html)
+        mp_js = self.client.get("/mp.js").text
+        self.assertIn("window.ST_MCU_MP", mp_js)
+        gate = Path(ROOT / "web" / "gate.js").read_text(encoding="utf-8")
+        self.assertIn("if (window.ST_MCU_MP)", gate)
+        css = Path(ROOT / "web" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn("html.is-mp #gate", css)
+        i18n = Path(ROOT / "web" / "i18n.js").read_text(encoding="utf-8")
+        self.assertIn('window.ST_MCU_MP ? "zh"', i18n)
 
     def test_miniprogram_production_uses_aliyun_legal_host(self) -> None:
         text = Path(ROOT / "miniprogram" / "config.js").read_text(encoding="utf-8")
         self.assertIn("https://mp.microelectronics.com", text)
         self.assertIn("mp.microelectronics.com", text)
+        self.assertIn("/?mp=1", text)
         self.assertNotIn("REPLACE-WITH-ICP-DOMAIN", text)
 
 

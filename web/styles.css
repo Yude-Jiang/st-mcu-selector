@@ -28,6 +28,15 @@ body {
   min-height: 100vh;
 }
 
+html.is-mp #gate,
+html.is-mp .langs {
+  display: none !important;
+}
+
+html.is-mp #root[hidden] {
+  display: block !important;
+}
+
 .gate {
   min-height: 100vh;
   display: flex;

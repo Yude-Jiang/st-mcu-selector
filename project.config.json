@@ -3,7 +3,7 @@
   "compileType": "miniprogram",
   "appid": "touristappid",
   "projectname": "st-mcu-selector",
-  "description": "ST MCU Selector 微信小程序，表单调阿里云 API",
+  "description": "ST MCU Selector 微信小程序，web-view 打开阿里云选型页",
   "setting": {
     "es6": true,
     "minified": true,
