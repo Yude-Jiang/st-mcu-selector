@@ -75,11 +75,11 @@
       <form id="form-requirements" class="form-panel is-open" role="tabpanel" aria-labelledby="tab-requirements">
         <div class="nl-box">
           <label class="field"><span data-i18n="nl.label">用一句话描述</span>
-            <textarea id="nl-text" maxlength="500" placeholder="例如：电机控制要 USB；有没有跟 GD32H779 性能接近的，最好从 H5 里找；替换某厂订货号；查看 STM32G474RET3。" data-i18n-placeholder="nl.placeholder"></textarea>
+            <textarea id="nl-text" maxlength="500" placeholder="例如：电机控制要 USB；有没有跟 XXX 性能接近的，最好从 H5 里找；替换某厂订货号；查看 STM32G474RET3。" data-i18n-placeholder="nl.placeholder"></textarea>
           </label>
           <p class="nl-notes" id="nl-notes">点推荐后直接出候选。硬约束可在左侧改。不承诺价格和交期。</p>
         </div>
-        <div class="file-box" id="nl-drop">
+        <div class="file-box" id="nl-drop" hidden>
           <input id="nl-pdf" type="file" accept="application/pdf,.pdf,image/png,image/jpeg,image/webp,image/bmp,.png,.jpg,.jpeg,.webp,.bmp" hidden>
           <label class="drop-zone" for="nl-pdf" id="nl-drop-label">
             <span class="drop-title" data-i18n="drop.title">可选上传竞品规格书 PDF 或截图；可拖拽到此处。</span>
@@ -88,7 +88,7 @@
           </label>
         </div>
         <div class="actions"><button type="submit" data-i18n="submit.recommend">推荐</button></div>
-        <details id="must-panel" class="must-panel" open>
+        <details id="must-panel" class="must-panel">
         <summary data-i18n="must.summary">硬约束（可改后再点推荐）</summary>
         <div class="form-grid">
           <label class="field"><span data-i18n="field.application">应用</span>

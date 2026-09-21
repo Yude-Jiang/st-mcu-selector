@@ -100,7 +100,7 @@ function resetWorkspace() {
     $("brief-body").innerHTML = "";
   }
   const panel = $("must-panel");
-  if (panel) panel.open = true;
+  if (panel) panel.open = false;
   session.candidates = [];
   session.history = [];
   session.context = "";
