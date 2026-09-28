@@ -10,6 +10,9 @@ import urllib.error
 import urllib.request
 from typing import Any
 
+from package_norm import FAMILIES as PACKAGES
+from package_norm import normalize_package_name, parse_package_and_pins
+
 APPLICATIONS = {
     "motor_control": ("电机", "马达", "motor"),
     "power_conversion": ("电源", "pfc", "power"),
@@ -21,7 +24,6 @@ MIN_FIELDS = {
     "frequency_mhz", "flash_kb", "ram_kb", "temperature_max_c",
     "fdcan", "usb", "motor_timers", "hrtim",
 }
-PACKAGES = ("LQFP", "QFN", "BGA", "WLCSP")
 MAX_CHARS = 500
 LLM_KEY_ENV = ("VITE_DEEPSEEK_API_KEY", "DEEPSEEK_API_KEY", "ST_MCU_LLM_KEY")
 
@@ -30,7 +32,9 @@ SYSTEM_PROMPT = """你把工程师的中文或英文需求改写成 JSON，供 S
 字段只能用：
 - application: motor_control | power_conversion | bms | industrial_control | iot 或省略
 - unknown_policy: allow_risk | exclude
-- must: 对象。数值约束用 {"min": 数字}，引脚用 {"max": 数字}，封装用 ["LQFP"] 这类。
+- must: 对象。数值约束用 {"min": 数字}。引脚：说「LQFP64」这类具体封装时用 {"min":64,"max":64}；说「不超过/以内」时只用 {"max": 数字}。
+  封装用家族名 ["LQFP"] / ["QFN"] / ["BGA"] / ["WLCSP"]。UFQFPN/VFQFPN/UQFN 一律写成 QFN，UFBGA/TFBGA 写成 BGA。不要把 LQFP64 整段当作 package_type。
+  不要把 Flash/RAM 的 KB 数字当成引脚。
 允许的 must 键：frequency_mhz, flash_kb, ram_kb, pin_count, temperature_max_c, fdcan, usb, motor_timers, hrtim, package_type。
 用户没说的字段不要编。忽略价格和交期，可在 notes 数组说明忽略了什么。
 """
@@ -93,14 +97,7 @@ def parse_with_rules(text: str) -> dict[str, Any]:
     temp = _temperature_max_c(text)
     if temp:
         must["temperature_max_c"] = {"min": temp}
-    package_hit = re.search(r"\b(lqfp|qfn|bga|wlcsp)\s*-?\s*(\d{2,3})?\b", lower)
-    if package_hit:
-        must["package_type"] = [package_hit.group(1).upper()]
-        if package_hit.group(2):
-            must["pin_count"] = {"max": int(package_hit.group(2))}
-    pins = _first_number(r"(\d{2,3})\s*引脚", text)
-    if pins and "pin_count" not in must:
-        must["pin_count"] = {"max": pins}
+    must.update(parse_package_and_pins(text))
     if re.search(r"fdcan", lower):
         must["fdcan"] = {"min": 1}
     if re.search(r"\busb\b", lower):
@@ -117,7 +114,10 @@ def parse_with_rules(text: str) -> dict[str, Any]:
 def merge_drafts(rules: dict[str, Any], model: dict[str, Any]) -> dict[str, Any]:
     clean = sanitize_draft(model)
     must = dict(rules.get("must") or {})
-    must.update(clean.get("must") or {})
+    for key, value in (clean.get("must") or {}).items():
+        if key in {"package_type", "pin_count"} and key in must:
+            continue
+        must[key] = value
     application = clean.get("application") or rules.get("application")
     policy = clean.get("unknown_policy") or rules.get("unknown_policy") or "allow_risk"
     notes = list(clean.get("notes") or [])
@@ -134,12 +134,13 @@ def sanitize_draft(raw: dict[str, Any] | None) -> dict[str, Any]:
             if number is not None:
                 must[key] = {"min": number}
         elif key == "pin_count":
-            number = _constraint_number(value, "max") or _constraint_number(value, "min")
-            if number is not None:
-                must["pin_count"] = {"max": number}
+            pins = _pin_constraint(value)
+            if pins:
+                must["pin_count"] = pins
         elif key == "package_type":
             names = value if isinstance(value, list) else [value]
-            allowed = [str(item).upper() for item in names if str(item).upper() in PACKAGES]
+            allowed = [normalize_package_name(item) for item in names]
+            allowed = [item for item in allowed if item]
             if allowed:
                 must["package_type"] = allowed[:1]
     application = source.get("application")
@@ -198,6 +199,18 @@ def extract_json(text: str) -> dict[str, Any]:
     if not isinstance(parsed, dict):
         raise ValueError("模型未返回对象")
     return parsed
+
+
+def _pin_constraint(value: Any) -> dict[str, int] | None:
+    if isinstance(value, dict) and "min" in value and "max" in value:
+        low = _constraint_number(value, "min")
+        high = _constraint_number(value, "max")
+        if low is not None and high is not None:
+            return {"min": int(min(low, high)), "max": int(max(low, high))}
+    number = _constraint_number(value, "max") or _constraint_number(value, "min")
+    if number is None:
+        return None
+    return {"max": int(number)}
 
 
 def _temperature_max_c(text: str) -> float | None:

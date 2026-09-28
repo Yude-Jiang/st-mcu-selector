@@ -24,7 +24,7 @@ EXTRACT_PROMPT = """你从用户上传的 MCU datasheet 摘录中抽取规格，
 - manufacturer: 厂商名
 - part_number: 竞品订货号（不是 STM32）
 - specs: 对象。允许键 frequency_mhz, flash_kb, ram_kb, pin_count, package_type, temperature_max_c, fdcan, usb, motor_timers, hrtim。
-  package_type 只能是 LQFP / QFN / BGA / WLCSP。Flash/RAM 用 KB。数值用数字。
+  package_type 只能是 LQFP / QFN / BGA / WLCSP（UFQFPN、VFQFPN 写成 QFN；UFBGA、TFBGA 写成 BGA）。Flash/RAM 用 KB。数值用数字。不要把封装脚数和 Flash KB 弄混。
 - notes: 字符串数组
 """
 

@@ -25,7 +25,7 @@ class NlMustTests(unittest.TestCase):
         self.assertEqual(result["application"], "motor_control")
         self.assertEqual(result["must"]["frequency_mhz"], {"min": 170})
         self.assertEqual(result["must"]["package_type"], ["LQFP"])
-        self.assertEqual(result["must"]["pin_count"], {"max": 64})
+        self.assertEqual(result["must"]["pin_count"], {"min": 64, "max": 64})
         self.assertEqual(result["must"]["fdcan"], {"min": 1})
 
     def test_ignores_price_and_requires_real_specs(self) -> None:
@@ -81,6 +81,22 @@ class NlMustTests(unittest.TestCase):
             nl_must.parse_with_rules("LQFP64 105C")["must"]["temperature_max_c"],
             {"min": 105},
         )
+
+    def test_qfn_aliases_and_pin_budget(self) -> None:
+        must = nl_must.parse_with_rules("电机控制 UFQFPN48")["must"]
+        self.assertEqual(must["package_type"], ["QFN"])
+        self.assertEqual(must["pin_count"], {"min": 48, "max": 48})
+        budget = nl_must.parse_with_rules("LQFP，不超过 64 脚")["must"]
+        self.assertEqual(budget["package_type"], ["LQFP"])
+        self.assertEqual(budget["pin_count"], {"max": 64})
+        self.assertNotIn("pin_count", nl_must.parse_with_rules("Flash 512KB，LQFP")["must"])
+
+    def test_rules_keep_package_when_model_guesses_wrong(self) -> None:
+        rules = nl_must.parse_with_rules("LQFP64")
+        fake = {"must": {"package_type": ["BGA"], "pin_count": {"max": 100}}}
+        merged = nl_must.merge_drafts(rules, fake)
+        self.assertEqual(merged["must"]["package_type"], ["LQFP"])
+        self.assertEqual(merged["must"]["pin_count"], {"min": 64, "max": 64})
 
 
 if __name__ == "__main__":

@@ -177,8 +177,8 @@ def sanitize_specs(raw: dict[str, Any]) -> dict[str, Any]:
         if key not in SPEC_KEYS:
             continue
         if key == "package_type":
-            name = str(value).upper()
-            if name in nl_must.PACKAGES:
+            name = nl_must.normalize_package_name(value)
+            if name:
                 specs[key] = name
             continue
         number = nl_must._constraint_number(value, "min")

@@ -22,6 +22,7 @@ from shortlist import (
     pick_shortlist,
 )
 import app_fit
+import package_norm
 import ui_copy
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -328,8 +329,14 @@ def evaluate_constraint(field: str, value: Any, raw_constraint: Any, lang: str =
             return "fail", f"{label}={number:g} > {constraint['max']}"
         return "pass", f"{label}={number:g}"
     choices = constraint.get("any_of") or constraint.get("contains")
-    if choices is not None and not text_matches(value, list(choices)):
-        return "fail", copy["mismatch"].format(label=label, value=repr(value), choices=choices)
+    if choices is not None:
+        matched = (
+            package_norm.package_matches(value, list(choices))
+            if field == "package_type"
+            else text_matches(value, list(choices))
+        )
+        if not matched:
+            return "fail", copy["mismatch"].format(label=label, value=repr(value), choices=choices)
     if "equals" in constraint and str(value).lower() != str(constraint["equals"]).lower():
         return "fail", f"{label}={value!r} != {constraint['equals']!r}"
     return "pass", f"{label}={value}"
@@ -489,7 +496,11 @@ def similarity(field: str, candidate: Any, target: Any, lang: str = "zh") -> tup
         scale = max(abs(wanted), 1.0)
         closeness = max(0.0, 1.0 - abs(actual - wanted) / scale)
         return closeness, copy["vs"].format(label=label, st=f"{actual:g}", other=f"{wanted:g}")
-    matched = text_matches(candidate, target if isinstance(target, list) else [target])
+    matched = package_norm.package_matches(
+        candidate, target if isinstance(target, list) else [target]
+    ) if field == "package_type" else text_matches(
+        candidate, target if isinstance(target, list) else [target]
+    )
     return (1.0 if matched else 0.0), copy["vs"].format(label=label, st=candidate, other=target)
 
 

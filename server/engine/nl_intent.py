@@ -14,7 +14,7 @@ INTENT_PROMPT = """你把工程师的任意一句话改写成 JSON，供 STM32 �
 - intent: recommend | compare | inspect | explain | refuse
 - inspect_part: 仅 inspect 时填用户写出的 STM32 订货号
 - competitor: 要对标/替换/接近某颗非 STM32 料时 {"manufacturer":"厂商","part_number":"订货号"}。任意厂商。
-- must: 硬约束。数值 {"min":数字}，引脚 {"max":数字}，封装 ["LQFP"]
+- must: 硬约束。数值 {"min":数字}。引脚：LQFP64 这类写成 {"min":64,"max":64}；「不超过 64 脚」写成 {"max":64}。封装家族 ["LQFP"] / ["QFN"] / ["BGA"] / ["WLCSP"]（UFQFPN→QFN，UFBGA→BGA）。不要把 KB 数字当引脚。
   允许键 frequency_mhz, flash_kb, ram_kb, pin_count, temperature_max_c, fdcan, usb, motor_timers, hrtim, package_type
 - series_prefix: 用户点名的 STM32 系列，如「从H5中找」→ ["STM32H5"]。没说不要编。
 - application: motor_control | power_conversion | bms | industrial_control | iot 或省略
