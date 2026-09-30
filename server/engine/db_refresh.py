@@ -22,7 +22,7 @@ from typing import Any, Callable
 
 import update_database as updater
 
-DEFAULT_INTERVAL_HOURS = 168.0  # weekly
+DEFAULT_INTERVAL_HOURS = 6.0
 _SLEEP_SLICE = 30.0
 
 _lock = threading.Lock()

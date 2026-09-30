@@ -26,7 +26,7 @@ Cloud Run / GCS 说明见 [`../cloud-run/README.md`](../cloud-run/README.md)。
 # 对象由应用写入：cube-finder-db/current.json 与 objects/<sha256>/cube-finder-db.db
 ```
 
-ETag 与 ST zip 一致则从 OSS 拷贝；变化则拉新包、写新对象、再改 pointer。ST 不可达时用上一份，`/api/health` 里 `cache.stale=true`。
+ETag 与 ST zip 一致则从 OSS 拷贝；变化则拉新包、写新对象、再改 pointer。ST 不可达时用上一份，`/api/health` 里 `cache.stale=true`。SAE 保持 1 个副本，运行中的实例每 6 小时 HEAD 一次 `cube-finder-db.zip`，ETag 变了才下载。
 
 ## 部署（SAE + ACR）
 

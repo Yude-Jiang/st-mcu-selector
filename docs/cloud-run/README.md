@@ -48,7 +48,7 @@ gcloud run deploy st-mcu-selector \
   --memory 2Gi \
   --timeout 300 \
   --max-instances 1 \
-  --set-env-vars FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db,ST_MCU_DB_CHECK_INTERVAL_HOURS=168 \
+  --set-env-vars FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db,ST_MCU_DB_CHECK_INTERVAL_HOURS=6 \
   --set-secrets VITE_DEEPSEEK_API_KEY=VITE_DEEPSEEK_API_KEY:latest
 ```
 
@@ -73,7 +73,7 @@ gcloud run deploy st-mcu-selector-preview \
   --memory 2Gi \
   --timeout 300 \
   --max-instances 1 \
-  --set-env-vars FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db,ST_MCU_SERIES_DIVERSIFY=true,ST_MCU_DB_CHECK_INTERVAL_HOURS=168 \
+  --set-env-vars FORWARDED_ALLOW_IPS=*,ST_MCU_GCS_BUCKET=st-china-ai-force-mcu-db,ST_MCU_SERIES_DIVERSIFY=true,ST_MCU_DB_CHECK_INTERVAL_HOURS=6 \
   --set-secrets VITE_DEEPSEEK_API_KEY=VITE_DEEPSEEK_API_KEY:latest
 ```
 
@@ -103,9 +103,9 @@ Health: `/healthz`（器件库未就绪时 503）。`/api/health` 含 `cache.sou
 上游 `cube-finder-db.zip` 刷新后，我们是否也是最新的，取决于实例活多久：
 
 - **新实例启动**：一定会 HEAD 探测 ETag，变了就重新下载。所以冷启动出来的实例必然是新的。
-- **已经在跑的实例**：靠后台线程按 `ST_MCU_DB_CHECK_INTERVAL_HOURS` 重查（默认 168 小时 = 每周）。ETag 没变则只更新 freshness 记录，不下载、不覆盖正在服务的库；变了才重新下载。对象存储物化走临时文件 + `os.replace`，避免原地写 SQLite。设 0 关闭。
+- **已经在跑的实例**：靠后台线程按 `ST_MCU_DB_CHECK_INTERVAL_HOURS` 重查（默认 6 小时）。ETag 没变则只更新 freshness 记录，不下载、不覆盖正在服务的库；变了才重新下载，并写入本云的对象缓存。对象存储物化走临时文件 + `os.replace`，避免原地写 SQLite。设 0 关闭。
 
-不设 `--min-instances` 时，Cloud Run 空闲约 15 分钟缩容到 0，实例通常活不到一周，所以周期性重查基本不会触发——它是"万一实例长命"的兜底。**如果哪天设了 `--min-instances`，实例不再回收，这个线程就是唯一的更新途径，间隔要相应调短。**
+Google Cloud（GCS）和阿里云（OSS）各有自己的缓存，源头都是同一个 `cube-finder-db.zip`。有流量时实例会一直活着，这 6 小时就是它跟上上游的间隔。空闲缩到 0 的实例在下一次冷启动时也会先 HEAD 再决定要不要下载。
 
 重载期间新旧两份库会短暂同时存在，而 Cloud Run 的可写文件系统是内存文件系统，所以 `--memory` 要留够 2× 库大小的余量（现网库大小看 `/api/health` 的 `database_bytes`）。
 
@@ -121,7 +121,7 @@ curl -s https://<服务地址>/api/db-freshness | python3 -m json.tool
   "upstream_fingerprint": "etag:\"abc123\"",
   "up_to_date": true,
   "checked_at": "2026-09-08T02:00:00+00:00",
-  "interval_hours": 168.0
+  "interval_hours": 6.0
 }
 ```
 

@@ -44,6 +44,8 @@ spec:
               value: "0.0.0.0"
             - name: ST_MCU_AUTO_UPDATE
               value: if_missing
+            - name: ST_MCU_DB_CHECK_INTERVAL_HOURS
+              value: "6"
             - name: FORWARDED_ALLOW_IPS
               value: "*"
           resources:

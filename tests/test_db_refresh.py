@@ -14,12 +14,12 @@ import db_refresh  # noqa: E402
 
 
 class IntervalTest(unittest.TestCase):
-    def test_default_is_weekly(self):
+    def test_default_is_six_hours(self):
         with patch.dict("os.environ", {}, clear=False):
             import os
 
             os.environ.pop("ST_MCU_DB_CHECK_INTERVAL_HOURS", None)
-            self.assertEqual(db_refresh.interval_hours(), 168.0)
+            self.assertEqual(db_refresh.interval_hours(), 6.0)
 
     def test_zero_disables(self):
         with patch.dict("os.environ", {"ST_MCU_DB_CHECK_INTERVAL_HOURS": "0"}):
@@ -28,7 +28,7 @@ class IntervalTest(unittest.TestCase):
 
     def test_unparsable_falls_back_to_default(self):
         with patch.dict("os.environ", {"ST_MCU_DB_CHECK_INTERVAL_HOURS": "soon"}):
-            self.assertEqual(db_refresh.interval_hours(), 168.0)
+            self.assertEqual(db_refresh.interval_hours(), 6.0)
 
 
 class ProbeTest(unittest.TestCase):
