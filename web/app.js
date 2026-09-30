@@ -45,7 +45,7 @@ function numberOrNull(value) {
 function collectMust(form) {
   const data = new FormData(form);
   const must = {};
-  const minFields = ["frequency_mhz", "flash_kb", "ram_kb", "temperature_max_c", "fdcan", "usb", "motor_timers", "hrtim"];
+  const minFields = ["frequency_mhz", "flash_kb", "ram_kb", "temperature_max_c", "fdcan", "usb", "i2c", "motor_timers", "hrtim"];
   minFields.forEach((name) => {
     const value = numberOrNull(data.get(name));
     if (value !== null) must[name] = { min: value };
@@ -123,7 +123,8 @@ function paintCards(payload) {
   });
   const rejected = payload.rejected_by_hard_constraints;
   const extra = rejected === undefined ? "" : t("rejected", { count: rejected });
-  $("results").innerHTML = `<h2 class="results-title">${heading}</h2>${lead}${table}${cards.join("")}<p class="meta">${escapeHtml(payload.disclaimer || "")} ${extra}</p>`;
+  const exportBar = typeof exportBarHtml === "function" ? exportBarHtml(payload) : "";
+  $("results").innerHTML = `<h2 class="results-title">${heading}</h2>${exportBar}${lead}${table}${cards.join("")}<p class="meta">${escapeHtml(payload.disclaimer || "")} ${extra}</p>`;
 }
 
 function paintInspect(payload) {
@@ -154,30 +155,9 @@ async function postJson(url, body) {
   return parseResponse(response);
 }
 
-$("form-requirements").addEventListener("submit", async (event) => {
+$("form-requirements").addEventListener("submit", (event) => {
   event.preventDefault();
-  const form = event.currentTarget;
-  const text = ($("nl-text") && $("nl-text").value.trim()) || "";
-  try {
-    if (text.length >= 4 || (typeof attachedDatasheetFile === "function" && attachedDatasheetFile())) {
-      const prompt = text.length >= 2 ? text : t("uploadPrompt");
-      if (typeof askEngine === "function") {
-        await askEngine(prompt, { seed: true });
-        return;
-      }
-    }
-    const data = new FormData(form);
-    const payload = await postJson("/api/recommend", {
-      must: collectMust(form),
-      application: data.get("application") || null,
-      unknown_policy: data.get("unknown_policy") || "allow_risk",
-      limit: 3,
-    });
-    setBanner("", false);
-    renderCards(payload);
-  } catch (error) {
-    setBanner(error.message, true);
-  }
+  if (typeof submitRequirements === "function") submitRequirements(event.currentTarget);
 });
 
 $("form-inspect").addEventListener("submit", async (event) => {

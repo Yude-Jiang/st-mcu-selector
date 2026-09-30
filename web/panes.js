@@ -12,6 +12,8 @@ function snapshotPane(mode) {
     briefHidden: !$("brief") || $("brief").hidden,
     thread: $("thread") ? $("thread").innerHTML : "",
     threadHidden: !$("thread") || $("thread").hidden,
+    rounds: $("rounds") ? $("rounds").innerHTML : "",
+    roundsHidden: !$("rounds") || $("rounds").hidden,
     followupHidden: !$("followup") || $("followup").hidden,
     followupValue: box ? box.value : "",
     mustOpen: panel ? panel.open : true,
@@ -40,6 +42,11 @@ function emptyReadout() {
   if (thread) {
     thread.innerHTML = "";
     thread.hidden = true;
+  }
+  const rounds = $("rounds");
+  if (rounds) {
+    rounds.innerHTML = "";
+    rounds.hidden = true;
   }
   const followup = $("followup");
   if (followup) followup.hidden = true;
@@ -70,6 +77,10 @@ function restorePane(mode) {
   if ($("thread")) {
     $("thread").innerHTML = saved.thread;
     $("thread").hidden = saved.threadHidden;
+  }
+  if ($("rounds")) {
+    $("rounds").innerHTML = saved.rounds || "";
+    $("rounds").hidden = saved.roundsHidden !== false && !saved.rounds;
   }
   const page = document.querySelector(".page");
   if (page) page.classList.toggle("has-results", saved.hasResults);

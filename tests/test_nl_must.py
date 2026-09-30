@@ -54,6 +54,14 @@ class NlMustTests(unittest.TestCase):
         self.assertTrue(nl_must.llm_configured())
         self.assertEqual(nl_must.llm_api_key(), "test")
 
+    def test_i2c_count_and_compact_package(self) -> None:
+        text = "我想找一颗STM32，具备3路I2C，封装尽量小，价格尽量便宜"
+        result = nl_must.parse_with_rules(text)
+        self.assertEqual(result["must"]["i2c"], {"min": 3})
+        self.assertTrue(result["compact_package"])
+        self.assertTrue(any("已忽略价格" in note for note in result["notes"]))
+        self.assertNotIn("package_type", result["must"])
+
     def test_i2c_is_not_a_temperature(self) -> None:
         must = nl_must.parse_with_rules("电机控制，要 I2C 和 USB")["must"]
         self.assertNotIn("temperature_max_c", must)

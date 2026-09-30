@@ -1,11 +1,11 @@
 const IDENTITY_KEYS = ["core", "frequency_mhz", "flash_kb", "ram_kb", "package", "pin_count"];
 const SHORTLIST_KEYS = [
   "core", "frequency_mhz", "flash_kb", "ram_kb", "package", "pin_count",
-  "temperature_max_c", "fdcan", "usb", "motor_timers", "hrtim",
+  "temperature_max_c", "fdcan", "usb", "i2c", "motor_timers", "hrtim",
 ];
 const SPEC_GROUP_KEYS = [
   { titleKey: "group.operating", keys: ["temperature_min_c", "temperature_max_c", "voltage_min_v", "voltage_max_v"] },
-  { titleKey: "group.comm", keys: ["fdcan", "can", "usb", "usb_types", "ethernet", "ethernet_speed_mbps"] },
+  { titleKey: "group.comm", keys: ["fdcan", "can", "usb", "i2c", "usb_types", "ethernet", "ethernet_speed_mbps"] },
   { titleKey: "group.analog", keys: ["adc_channels", "adc_units", "opamps", "comparators", "dac_channels", "motor_timers", "hrtim", "timers", "timers_16bit", "timers_32bit"] },
 ];
 const LIST_KEY_DEFS = [

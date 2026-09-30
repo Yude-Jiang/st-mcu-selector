@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./forms.css">
   <link rel="stylesheet" href="./chat.css">
+  <link rel="stylesheet" href="./rounds.css">
   <script src="./mp.js"></script>
 </head>
 <body>
@@ -131,6 +132,12 @@
           <label class="field"><span data-i18n="field.usb">USB 至少</span>
             <input name="usb" type="number" min="0" placeholder="例如 1" data-i18n-placeholder="ph.min1">
           </label>
+          <label class="field"><span data-i18n="field.i2c">I2C 至少</span>
+            <input name="i2c" type="number" min="0" placeholder="例如 3" data-i18n-placeholder="ph.i2c">
+          </label>
+          <label class="field"><span data-i18n="field.compact">封装尽量小</span>
+            <input name="compact_package" type="checkbox">
+          </label>
           <label class="field"><span data-i18n="field.motorTimers">电机定时器至少</span>
             <input name="motor_timers" type="number" min="0" placeholder="例如 1" data-i18n-placeholder="ph.min1">
           </label>
@@ -144,6 +151,10 @@
             </select>
           </label>
         </div>
+        </details>
+        <details id="history-panel" class="history-panel">
+          <summary data-i18n="history.summary">历史记录</summary>
+          <div id="history-list" class="history-list"></div>
         </details>
       </form>
 
@@ -168,6 +179,7 @@
       </div>
       </div>
       <div class="workspace-read">
+        <section id="rounds" class="rounds" hidden></section>
         <article id="brief" class="brief" hidden>
           <h2 class="brief-title" id="brief-title"></h2>
           <div class="brief-body" id="brief-body"></div>
@@ -195,5 +207,9 @@
   <script src="./turn.js"></script>
   <script src="./panes.js"></script>
   <script src="./suggest.js"></script>
+  <script src="./form-recommend.js"></script>
+  <script src="./rounds.js"></script>
+  <script src="./history.js"></script>
+  <script src="./export.js"></script>
 </body>
 </html>

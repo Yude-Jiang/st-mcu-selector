@@ -20,6 +20,7 @@ from shortlist import (
     format_points,
     matches_series_prefix,
     pick_shortlist,
+    rank_key,
 )
 import app_fit
 import package_norm
@@ -47,6 +48,7 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
     "can": ("cpnd_cantotal", "can", "can2_0"),
     "fdcan": ("fdcan",),
     "usb": ("nb_usb2_itf", "usbs"),
+    "i2c": ("cpnd_i2ctotal", "I2C"),
     "usb_types": ("usbs",),
     "ethernet": ("ethernet_port",),
     "ethernet_speed_mbps": ("ethernet",),
@@ -70,7 +72,7 @@ FIELD_ALIASES: dict[str, tuple[str, ...]] = {
 
 NUMERIC_FIELDS = {
     "frequency_mhz", "flash_kb", "ram_kb", "adc_channels", "adc_units",
-    "dac_channels", "opamps", "comparators", "can", "fdcan", "usb",
+    "dac_channels", "opamps", "comparators", "can", "fdcan", "usb", "i2c",
     "ethernet", "ethernet_speed_mbps", "motor_timers", "hrtim", "timers", "timers_16bit",
     "timers_32bit", "timers_8bit", "pin_count", "temperature_min_c", "temperature_max_c",
     "voltage_min_v", "voltage_max_v",
@@ -347,7 +349,7 @@ def overqualification_penalty(field: str, value: Any, raw_constraint: Any) -> fl
         return 0.0
     constraint = normalize_constraint(field, raw_constraint)
     if "min" not in constraint or field in {
-        "temperature_max_c", "voltage_max_v", "fdcan", "can", "usb", "ethernet",
+        "temperature_max_c", "voltage_max_v", "fdcan", "can", "usb", "i2c", "ethernet",
         "opamps", "comparators", "motor_timers", "hrtim",
     }:
         return 0.0
@@ -363,7 +365,7 @@ def compact_facts(fields: dict[str, Any]) -> dict[str, Any]:
     keys = (
         "core", "frequency_mhz", "flash_kb", "ram_kb", "package", "pin_count",
         "temperature_min_c", "temperature_max_c", "adc_channels", "opamps",
-        "comparators", "motor_timers", "fdcan", "can", "usb", "ethernet",
+        "comparators", "motor_timers", "fdcan", "can", "usb", "i2c", "ethernet",
         "usb_types", "ethernet_speed_mbps", "hrtim", "timers", "security",
     )
     return {key: fields.get(key) for key in keys if fields.get(key) is not None}
@@ -456,7 +458,10 @@ def recommend(database: Path, request_data: dict[str, Any]) -> dict[str, Any]:
             "penalties": penalties,
         })
 
-    if request_data.get("series_prefix"):
+    compact = bool(request_data.get("compact_package"))
+    if compact:
+        ranked.sort(key=lambda item: rank_key(item, True))
+    elif request_data.get("series_prefix"):
         # Named-series browse with little or no must otherwise ties at ~100 and
         # RPN order surfaces entry-level 48-pin parts first. Prefer capacity.
         ranked.sort(

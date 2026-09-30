@@ -52,6 +52,7 @@ class TurnBody(BaseModel):
     history: list[str] = Field(default_factory=list, max_length=4)
     datasheet: Optional[DatasheetIn] = None
     lang: str = "zh"
+    compact_package: bool = False
 
 
 def _ready() -> None:
@@ -83,6 +84,12 @@ def _attach_shortlist(result: dict, shortlist: dict, lang: str = "zh") -> dict:
             result["answer"] = f"{lead}\n\n{brief}"
         else:
             result["answer"] = brief
+    if result.get("ignored_price"):
+        note = ui_copy.turn(lang)["price_ignored"]
+        answer = str(result.get("answer") or "")
+        if note not in answer:
+            result["answer"] = f"{note}\n\n{answer}".strip()
+    result["request"] = shortlist.get("request") or {}
     return result
 
 
@@ -129,6 +136,7 @@ def turn(body: TurnBody) -> dict:
             body.history,
             body.datasheet.model_dump() if body.datasheet else None,
             lang,
+            compact_package=body.compact_package,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -155,6 +163,7 @@ def turn(body: TurnBody) -> dict:
             "unknown_policy": result.get("unknown_policy") or "allow_risk",
             "limit": 3,
             "series_prefix": result.get("series_prefix") or [],
+            "compact_package": bool(result.get("compact_package")),
             "lang": lang,
         })
     except ValueError as exc:

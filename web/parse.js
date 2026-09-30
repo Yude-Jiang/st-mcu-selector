@@ -19,6 +19,7 @@ function applyRecommendDraft(draft) {
     "temperature_max_c",
     "fdcan",
     "usb",
+    "i2c",
     "motor_timers",
     "hrtim",
   ].forEach((name) => {
@@ -33,6 +34,9 @@ function applyRecommendDraft(draft) {
   if (packageType) form.elements.package_type.value = packageType;
   if (draft.application) form.elements.application.value = draft.application;
   if (draft.unknown_policy) form.elements.unknown_policy.value = draft.unknown_policy;
+  if (form.elements.compact_package && Object.prototype.hasOwnProperty.call(draft, "compact_package")) {
+    form.elements.compact_package.checked = Boolean(draft.compact_package);
+  }
   const notes = (draft.notes || []).join(" ");
   const notesEl = $("nl-notes");
   if (notesEl && notes) {
@@ -51,6 +55,7 @@ function specsToMust(specs) {
     "temperature_max_c",
     "fdcan",
     "usb",
+    "i2c",
     "motor_timers",
     "hrtim",
   ].forEach((name) => {

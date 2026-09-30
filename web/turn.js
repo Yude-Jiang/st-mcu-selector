@@ -106,6 +106,12 @@ function resetWorkspace() {
   session.context = "";
   session.view = "";
   session.payload = null;
+  const rounds = $("rounds");
+  if (rounds) {
+    rounds.innerHTML = "";
+    rounds.hidden = true;
+  }
+  if (typeof clearConstraintSnapshot === "function") clearConstraintSnapshot();
 }
 
 function rememberShortlist(payload) {
@@ -117,7 +123,7 @@ function rememberShortlist(payload) {
   session.view = "cards";
   session.payload = payload;
   showFollowup("shortlist");
-  showBrief(payload);
+  showBrief(payload, window.__roundQuestion || undefined);
 }
 
 function paintCurrentResults() {
@@ -176,6 +182,7 @@ async function askEngine(text, options) {
       must: collectMust(form),
       application: form.elements.application.value || null,
       unknown_policy: form.elements.unknown_policy.value || "allow_risk",
+      compact_package: Boolean(form.elements.compact_package && form.elements.compact_package.checked),
       candidates: session.candidates,
       history: prior,
       lang: getLang(),
@@ -194,6 +201,7 @@ async function askEngine(text, options) {
         unknown_policy: payload.unknown_policy || "allow_risk",
         notes: payload.notes || [],
         source: payload.source,
+        compact_package: Boolean(payload.compact_package),
       });
     }
     if (payload.inspect) {
@@ -201,6 +209,7 @@ async function askEngine(text, options) {
       renderInspect(payload.inspect);
     } else if (Array.isArray(payload.recommendations)) {
       renderCards(payload);
+      if (typeof rememberConstraints === "function") rememberConstraints(form);
     } else if (payload.answer) {
       appendTurn(cleaned, payload.answer);
     }
@@ -223,7 +232,10 @@ if (typeof onLangChange === "function") {
       return;
     }
     const last = session.history[session.history.length - 1];
-    if (last) askEngine(last, { seed: true, replay: true });
+    if (last) {
+      window.__replaceTopRound = true;
+      askEngine(last, { seed: true, replay: true });
+    }
   });
 }
 

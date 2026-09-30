@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 from typing import Any
 
 import nl_brief
@@ -23,10 +24,11 @@ INSPECT_HINTS = (
     "look up", "inspect", "orderable", "what is",
 )
 REFUSE_RE = re.compile(
-    r"价格|交期|lead\s*time|便宜|引脚兼容|pin[\s-]?compat|cheaper|price|lead-time",
+    r"交期|lead\s*time|引脚兼容|pin[\s-]?compat|lead-time",
     re.I,
 )
 STM32_RE = re.compile(r"(?<![A-Z0-9])(STM32[A-Z0-9]{5,})(?![A-Z0-9])", re.I)
+_TURN = threading.local()
 EXPLAIN_PROMPT = {
     "zh": """你根据给定的 STM32 短名单 JSON 和用户问题作答。
 只输出 JSON：{"intent":"explain","answer":"中文","notes":[]}
@@ -57,15 +59,18 @@ def handle(
     history: list[str],
     datasheet: dict[str, Any] | None = None,
     lang: str = "zh",
+    compact_package: bool = False,
 ) -> dict[str, Any]:
     cleaned = " ".join(str(text or "").split())
     copy = ui_copy.turn(lang)
+    price_hit = nl_must.mentions_price(cleaned)
     if len(cleaned) < 2:
         raise ValueError(copy["need"])
     if len(cleaned) > nl_must.MAX_CHARS:
         raise ValueError(f"请控制在 {nl_must.MAX_CHARS} 字以内。")
     slim = [slim_candidate(item) for item in candidates][:3]
-    current_must = dict(must or {})
+    form_must = dict(must or {})
+    current_must = dict(form_must)
     policy = unknown_policy if unknown_policy in {"allow_risk", "exclude"} else "allow_risk"
     user_series = nl_intent.extract_series_prefix(cleaned)
     intent = classify(cleaned, slim)
@@ -79,6 +84,7 @@ def handle(
             intent = overlay["intent"]
         current_must = dict(current_must)
         current_must.update(overlay.get("must") or {})
+        current_must.update(form_must)
         if overlay.get("application"):
             application = overlay["application"]
         notes_extra = list(overlay.get("notes") or [])
@@ -88,6 +94,20 @@ def handle(
         user_series,
         (overlay or {}).get("series_prefix") if overlay else None,
     )
+    if intent == "refuse" and not REFUSE_RE.search(cleaned):
+        intent = "refine_must"
+    rules_now = nl_must.parse_with_rules(cleaned)
+    for key, value in (rules_now.get("must") or {}).items():
+        if key not in form_must:
+            current_must[key] = value
+    compact = bool(
+        compact_package
+        or rules_now.get("compact_package")
+        or (overlay or {}).get("compact_package")
+    )
+    _TURN.compact = compact
+    _TURN.price = price_hit
+    _TURN.copy = copy
     if overlay and overlay.get("intent") == "recommend":
         intent = "refine_must"
     if overlay and (overlay.get("competitor") or {}).get("part_number"):
@@ -185,10 +205,10 @@ def handle(
         if not overlay:
             draft = _try_requirements(cleaned)
             if not draft:
-                if not series_prefix and not merged and not application:
+                if not series_prefix and not merged and not application and not compact:
                     return _clarify(merged, application, policy, series_prefix, lang)
                 draft = {"must": {}, "notes": []}
-            merged.update(draft.get("must") or {})
+            merged = _keep_form(merged, draft.get("must"), form_must)
             application = draft.get("application") or application
             policy = draft.get("unknown_policy") or policy
             source = draft.get("source") or source
@@ -196,10 +216,10 @@ def handle(
         elif not merged and not series_prefix:
             draft = _try_requirements(cleaned)
             if not draft:
-                if not application:
+                if not application and not compact:
                     return _clarify(merged, application, policy, series_prefix, lang)
                 draft = {"must": {}, "notes": []}
-            merged.update(draft.get("must") or {})
+            merged = _keep_form(merged, draft.get("must"), form_must)
             application = draft.get("application") or application
             notes.extend(draft.get("notes") or [])
         return _payload(
@@ -314,6 +334,15 @@ def slim_candidate(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _keep_form(base: dict[str, Any], incoming: dict[str, Any] | None, form_must: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in (incoming or {}).items():
+        if key not in form_must:
+            merged[key] = value
+    merged.update(form_must)
+    return merged
+
+
 def _try_requirements(text: str) -> dict[str, Any] | None:
     try:
         return nl_must.parse_requirements(text)
@@ -364,4 +393,14 @@ def _payload(
     }
     if browse_not_compare:
         payload["browse_not_compare"] = True
+    payload["compact_package"] = bool(getattr(_TURN, "compact", False))
+    if getattr(_TURN, "price", False):
+        copy = getattr(_TURN, "copy", None) or ui_copy.turn("zh")
+        note = copy["price_ignored"]
+        payload["ignored_price"] = True
+        notes = [note] + [item for item in payload["notes"] if item != note]
+        payload["notes"] = notes
+        answer = str(payload.get("answer") or "")
+        if note not in answer:
+            payload["answer"] = f"{note}\n\n{answer}".strip()
     return payload

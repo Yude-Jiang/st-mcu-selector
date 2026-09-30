@@ -22,8 +22,11 @@ APPLICATIONS = {
 }
 MIN_FIELDS = {
     "frequency_mhz", "flash_kb", "ram_kb", "temperature_max_c",
-    "fdcan", "usb", "motor_timers", "hrtim",
+    "fdcan", "usb", "i2c", "motor_timers", "hrtim",
 }
+_I2C_RE = re.compile(r"(\d+)\s*(?:路|[x×])?\s*i2c|i2c\s*(?:[x×])?\s*(\d+)", re.I)
+_COMPACT_RE = re.compile(r"封装尽量小|尽量小.{0,6}封装|小封装|smallest package", re.I)
+_PRICE_RE = re.compile(r"价格|便宜|cheaper|\bprice\b", re.I)
 MAX_CHARS = 500
 LLM_KEY_ENV = ("VITE_DEEPSEEK_API_KEY", "DEEPSEEK_API_KEY", "ST_MCU_LLM_KEY")
 
@@ -35,8 +38,9 @@ SYSTEM_PROMPT = """你把工程师的中文或英文需求改写成 JSON，供 S
 - must: 对象。数值约束用 {"min": 数字}。引脚：说「LQFP64」这类具体封装时用 {"min":64,"max":64}；说「不超过/以内」时只用 {"max": 数字}。
   封装用家族名 ["LQFP"] / ["QFN"] / ["BGA"] / ["WLCSP"]。UFQFPN/VFQFPN/UQFN 一律写成 QFN，UFBGA/TFBGA 写成 BGA。不要把 LQFP64 整段当作 package_type。
   不要把 Flash/RAM 的 KB 数字当成引脚。
-允许的 must 键：frequency_mhz, flash_kb, ram_kb, pin_count, temperature_max_c, fdcan, usb, motor_timers, hrtim, package_type。
-用户没说的字段不要编。忽略价格和交期，可在 notes 数组说明忽略了什么。
+允许的 must 键：frequency_mhz, flash_kb, ram_kb, pin_count, temperature_max_c, fdcan, usb, i2c, motor_timers, hrtim, package_type。
+i2c 用 {"min": 路数}。「3路I2C」是 3。compact_package 为 true 表示封装尽量小（按引脚从少到多排），不要因此编 package_type。
+用户没说的字段不要编。忽略价格和交期，可在 notes 数组说明忽略了什么。不要因为价格把整句判成无法检索。
 """
 
 
@@ -62,6 +66,21 @@ def parse_requirements(text: str) -> dict[str, Any]:
     if not llm_configured() and merged["source"] == "rules":
         merged["notes"] = ["未配置大模型，已按关键词填入。请核对表单后再给出短名单。"] + list(merged["notes"])
     return merged
+
+
+def mentions_price(text: str) -> bool:
+    return bool(_PRICE_RE.search(str(text or "")))
+
+
+def i2c_min(text: str) -> int | None:
+    match = _I2C_RE.search(str(text or ""))
+    if match:
+        raw = next((group for group in match.groups() if group), None)
+        if raw is not None:
+            return int(raw)
+    if re.search(r"\bi2c\b", str(text or ""), flags=re.I):
+        return 1
+    return None
 
 
 def llm_configured() -> bool:
@@ -106,9 +125,20 @@ def parse_with_rules(text: str) -> dict[str, Any]:
         must["hrtim"] = {"min": 1}
     if "电机定时器" in text or "motor timer" in lower:
         must["motor_timers"] = {"min": 1}
-    if re.search(r"价格|交期|lead\s*time|price", lower):
-        notes.append("已忽略价格和交期，本工具不承诺供货。")
-    return {"must": must, "application": application, "unknown_policy": "allow_risk", "notes": notes}
+    i2c = i2c_min(text)
+    if i2c is not None:
+        must["i2c"] = {"min": i2c}
+    if mentions_price(text):
+        notes.append("已忽略价格，不按价格排序。")
+    if re.search(r"交期|lead\s*time", lower):
+        notes.append("已忽略交期，本工具不承诺供货。")
+    return {
+        "must": must,
+        "application": application,
+        "unknown_policy": "allow_risk",
+        "notes": notes,
+        "compact_package": bool(_COMPACT_RE.search(text)),
+    }
 
 
 def merge_drafts(rules: dict[str, Any], model: dict[str, Any]) -> dict[str, Any]:
@@ -121,7 +151,14 @@ def merge_drafts(rules: dict[str, Any], model: dict[str, Any]) -> dict[str, Any]
     application = clean.get("application") or rules.get("application")
     policy = clean.get("unknown_policy") or rules.get("unknown_policy") or "allow_risk"
     notes = list(clean.get("notes") or [])
-    return {"must": must, "application": application, "unknown_policy": policy, "notes": notes}
+    compact = bool(rules.get("compact_package") or clean.get("compact_package"))
+    return {
+        "must": must,
+        "application": application,
+        "unknown_policy": policy,
+        "notes": notes,
+        "compact_package": compact,
+    }
 
 
 def sanitize_draft(raw: dict[str, Any] | None) -> dict[str, Any]:
@@ -150,7 +187,13 @@ def sanitize_draft(raw: dict[str, Any] | None) -> dict[str, Any]:
     if policy not in {"allow_risk", "exclude"}:
         policy = "allow_risk"
     notes = [str(item) for item in source.get("notes") or [] if str(item).strip()]
-    return {"must": must, "application": application, "unknown_policy": policy, "notes": notes}
+    return {
+        "must": must,
+        "application": application,
+        "unknown_policy": policy,
+        "notes": notes,
+        "compact_package": bool(source.get("compact_package")),
+    }
 
 
 def call_model(text: str) -> dict[str, Any] | None:

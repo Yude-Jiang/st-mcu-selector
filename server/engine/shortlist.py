@@ -27,6 +27,7 @@ FIELD_LABELS = {
         "can": "CAN",
         "fdcan": "FDCAN",
         "usb": "USB",
+        "i2c": "I2C",
         "usb_types": "USB 类型",
         "ethernet": "Ethernet",
         "ethernet_speed_mbps": "Ethernet 速率",
@@ -56,6 +57,7 @@ FIELD_LABELS = {
         "can": "CAN",
         "fdcan": "FDCAN",
         "usb": "USB",
+        "i2c": "I2C",
         "usb_types": "USB types",
         "ethernet": "Ethernet",
         "ethernet_speed_mbps": "Ethernet speed",
@@ -183,6 +185,20 @@ def capacity_rank(item: dict[str, Any]) -> tuple[float, float, float, float]:
         _num("ram_kb"),
         _num("pin_count"),
     )
+
+
+def rank_key(item: dict[str, Any], compact: bool = False) -> tuple:
+    """Higher score first. Compact requests then put fewer pins first."""
+    score = -float(item.get("score") or 0)
+    part = str(item.get("part_number") or "")
+    if not compact:
+        return (score, part)
+    facts = item.get("facts") if isinstance(item.get("facts"), dict) else {}
+    try:
+        pins = float(facts.get("pin_count"))
+    except (TypeError, ValueError):
+        pins = 1e9
+    return (score, pins, part)
 
 
 def pick_shortlist(ranked: list[dict[str, Any]], limit: int, lang: str = "zh") -> list[dict[str, Any]]:

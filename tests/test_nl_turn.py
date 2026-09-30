@@ -40,6 +40,16 @@ class NlTurnTests(unittest.TestCase):
         self.assertIn("STM32G474RET3", result["answer"])
         self.assertFalse(result["rerecommend"])
 
+    def test_i2c_compact_keeps_searching_when_price_is_mentioned(self) -> None:
+        text = "我想找一颗STM32，具备3路I2C，封装尽量小，价格尽量便宜"
+        result = nl_turn.handle(text, {}, None, "allow_risk", [], [])
+        self.assertNotEqual(result["intent"], "refuse")
+        self.assertEqual(result["must"]["i2c"], {"min": 3})
+        self.assertTrue(result["compact_package"])
+        self.assertTrue(result["ignored_price"])
+        self.assertTrue(result["rerecommend"])
+        self.assertIn("已忽略价格", result["answer"])
+
     def test_followup_refuses_price(self) -> None:
         result = nl_turn.handle("哪颗更便宜、交期短？", {}, None, "allow_risk", self.candidates, [])
         self.assertEqual(result["intent"], "refuse")

@@ -16,6 +16,7 @@ from shortlist import (  # noqa: E402
     diversify_by_series,
     matches_series_prefix,
     pick_shortlist,
+    rank_key,
     series_group,
 )
 import mcu_recommender as engine  # noqa: E402
@@ -115,6 +116,14 @@ class ShortlistTests(unittest.TestCase):
         self.assertTrue(matches_series_prefix("STM32H563RIT6", "STM32H563RI", ["H5"]))
         self.assertTrue(matches_series_prefix("STM32H503CBT6", "STM32H503CB", ["STM32H5"]))
         self.assertFalse(matches_series_prefix("STM32G474RET3", "STM32G474RE", ["STM32H5"]))
+
+
+class RankKeyTests(unittest.TestCase):
+    def test_compact_prefers_fewer_pins_at_the_same_score(self) -> None:
+        large = {"part_number": "STM32F205VET6", "score": 100, "facts": {"pin_count": 100}}
+        small = {"part_number": "STM32F205RET6", "score": 100, "facts": {"pin_count": 64}}
+        ranked = sorted([large, small], key=lambda item: rank_key(item, True))
+        self.assertEqual([item["part_number"] for item in ranked], ["STM32F205RET6", "STM32F205VET6"])
 
 
 def _item(

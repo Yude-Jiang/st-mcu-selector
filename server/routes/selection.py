@@ -22,6 +22,7 @@ class RecommendBody(BaseModel):
     unknown_policy: UnknownPolicy = "allow_risk"
     limit: int = Field(default=3, ge=1, le=20)
     include_inactive: bool = False
+    compact_package: bool = False
 
 
 class CompareBody(BaseModel):
