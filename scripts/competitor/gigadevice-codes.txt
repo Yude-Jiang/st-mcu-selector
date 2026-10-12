@@ -1,0 +1,10 @@
+# Full GigaDevice ordering codes, one per line. Series names are rejected by the
+# harvester (GD32H779 404s), and nothing is ever inherited between siblings, so
+# every code you want in the catalogue has to be listed here in full.
+#
+#   python3 scripts/competitor/fetch-gigadevice.py --codes scripts/competitor/gigadevice-codes.txt --dry-run
+#
+# These two are the canary pair: same series, different Flash and package. If a
+# run leaves them blank, the harvester is broken, not the catalogue.
+GD32H759IIT6
+GD32H759IIK6
