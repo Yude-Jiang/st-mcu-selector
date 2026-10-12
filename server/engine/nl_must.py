@@ -24,7 +24,23 @@ MIN_FIELDS = {
     "frequency_mhz", "flash_kb", "ram_kb", "temperature_max_c",
     "fdcan", "usb", "i2c", "motor_timers", "hrtim",
 }
-_I2C_RE = re.compile(r"(\d+)\s*(?:路|[x×])?\s*i2c|i2c\s*(?:[x×])?\s*(\d+)", re.I)
+# Python treats CJK as \w, so \bi2c\b never matches in "2个I2C" — there is no word
+# boundary between 个 and I. Every keyword here uses an explicit ASCII-alnum guard
+# instead, and the quantifier list covers how engineers actually write counts.
+_QUANTIFIER = r"(?:路|个|组|通道|ch|x|×|\*)"
+_WORD = r"(?<![A-Za-z0-9])%s(?![A-Za-z0-9])"
+_I2C_RE = re.compile(
+    rf"(\d+)\s*{_QUANTIFIER}?\s*i2c(?![A-Za-z0-9])"
+    rf"|(?<![A-Za-z0-9])i2c\s*{_QUANTIFIER}?\s*(\d+)",
+    re.I,
+)
+_I2C_BARE = re.compile(_WORD % "i2c", re.I)
+_USB_BARE = re.compile(_WORD % "usb", re.I)
+_USB_RE = re.compile(
+    rf"(\d+)\s*{_QUANTIFIER}?\s*usb(?![A-Za-z0-9])"
+    rf"|(?<![A-Za-z0-9])usb\s*{_QUANTIFIER}?\s*(\d+)",
+    re.I,
+)
 _COMPACT_RE = re.compile(r"封装尽量小|尽量小.{0,6}封装|小封装|smallest package", re.I)
 _PRICE_RE = re.compile(r"价格|便宜|cheaper|\bprice\b", re.I)
 MAX_CHARS = 500
@@ -72,15 +88,23 @@ def mentions_price(text: str) -> bool:
     return bool(_PRICE_RE.search(str(text or "")))
 
 
-def i2c_min(text: str) -> int | None:
-    match = _I2C_RE.search(str(text or ""))
+def _count_for(text: str, counted: re.Pattern[str], bare: re.Pattern[str]) -> int | None:
+    """Number of interfaces asked for, or 1 when named without a count."""
+    body = str(text or "")
+    match = counted.search(body)
     if match:
         raw = next((group for group in match.groups() if group), None)
         if raw is not None:
             return int(raw)
-    if re.search(r"\bi2c\b", str(text or ""), flags=re.I):
-        return 1
-    return None
+    return 1 if bare.search(body) else None
+
+
+def i2c_min(text: str) -> int | None:
+    return _count_for(text, _I2C_RE, _I2C_BARE)
+
+
+def usb_min(text: str) -> int | None:
+    return _count_for(text, _USB_RE, _USB_BARE)
 
 
 def llm_configured() -> bool:
@@ -119,8 +143,9 @@ def parse_with_rules(text: str) -> dict[str, Any]:
     must.update(parse_package_and_pins(text))
     if re.search(r"fdcan", lower):
         must["fdcan"] = {"min": 1}
-    if re.search(r"\busb\b", lower):
-        must["usb"] = {"min": 1}
+    usb = usb_min(text)
+    if usb is not None:
+        must["usb"] = {"min": usb}
     if "hrtim" in lower:
         must["hrtim"] = {"min": 1}
     if "电机定时器" in text or "motor timer" in lower:

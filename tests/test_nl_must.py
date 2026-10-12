@@ -107,5 +107,48 @@ class NlMustTests(unittest.TestCase):
         self.assertEqual(merged["must"]["pin_count"], {"min": 64, "max": 64})
 
 
+class InterfaceCountTests(unittest.TestCase):
+    """CJK sits next to the keyword with no space, and Python counts CJK as \\w,
+    so a \\bi2c\\b style guard silently matches nothing in '2个I2C'."""
+
+    def test_counts_survive_chinese_quantifiers(self) -> None:
+        for text, expected in (
+            ("3路I2C", 3),
+            ("2个I2C", 2),
+            ("2组I2C", 2),
+            ("4个 I2C 接口", 4),
+            ("I2C x2", 2),
+            ("I2C 3通道", 3),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(nl_must.i2c_min(text), expected)
+
+    def test_named_without_a_count_means_one(self) -> None:
+        for text in ("需要I2C", "带I2C", "I2C"):
+            with self.subTest(text=text):
+                self.assertEqual(nl_must.i2c_min(text), 1)
+
+    def test_usb_counts_the_same_way(self) -> None:
+        self.assertEqual(nl_must.usb_min("2个USB"), 2)
+        self.assertEqual(nl_must.usb_min("需要USB"), 1)
+        self.assertIsNone(nl_must.usb_min("主频 170MHz"))
+
+    def test_substrings_do_not_count_as_the_interface(self) -> None:
+        for text in ("STM32I2C999", "usbhost", "MYUSB3", "i2cx"):
+            with self.subTest(text=text):
+                self.assertIsNone(nl_must.i2c_min(text))
+                self.assertIsNone(nl_must.usb_min(text))
+
+    def test_two_interfaces_in_one_sentence(self) -> None:
+        must = nl_must.parse_with_rules("3个I2C和2个USB")["must"]
+        self.assertEqual(must.get("i2c"), {"min": 3})
+        self.assertEqual(must.get("usb"), {"min": 2})
+
+    def test_i2c_is_not_read_as_a_temperature(self) -> None:
+        # "2C" inside I2C once produced temperature_max_c={"min": 2}.
+        must = nl_must.parse_with_rules("要 I2C 和 LQFP64")["must"]
+        self.assertNotIn("temperature_max_c", must)
+
+
 if __name__ == "__main__":
     unittest.main()
