@@ -53,6 +53,7 @@ class TurnBody(BaseModel):
     datasheet: Optional[DatasheetIn] = None
     lang: str = "zh"
     compact_package: bool = False
+    confirmed_specs: Optional[dict[str, Any]] = None
 
 
 def _ready() -> None:
@@ -137,6 +138,7 @@ def turn(body: TurnBody) -> dict:
             body.datasheet.model_dump() if body.datasheet else None,
             lang,
             compact_package=body.compact_package,
+            confirmed_specs=body.confirmed_specs,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

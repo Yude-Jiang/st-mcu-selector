@@ -187,6 +187,7 @@ async function askEngine(text, options) {
       history: prior,
       lang: getLang(),
     };
+    if (options && options.confirmed) body.confirmed_specs = options.confirmed;
     if (datasheet) body.datasheet = datasheet;
     const response = await fetch("/api/turn", {
       method: "POST",
@@ -207,6 +208,8 @@ async function askEngine(text, options) {
     if (payload.inspect) {
       if (!seed) appendTurn(cleaned, payload.answer || "");
       renderInspect(payload.inspect);
+    } else if (payload.confirm_card && typeof renderConfirmCard === "function") {
+      renderConfirmCard(cleaned, payload.confirm_card, payload.answer || "");
     } else if (Array.isArray(payload.recommendations)) {
       renderCards(payload);
       if (typeof rememberConstraints === "function") rememberConstraints(form);

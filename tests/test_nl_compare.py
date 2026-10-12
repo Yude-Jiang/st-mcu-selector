@@ -79,13 +79,14 @@ class NlCompareTests(unittest.TestCase):
         self.assertTrue(nl_compare.looks_like_compare(text))
         result = nl_turn.handle(text, {}, None, "allow_risk", [], [])
         self.assertEqual(result["series_prefix"], ["STM32H5"])
-        self.assertEqual(result["intent"], "refine_must")
-        self.assertTrue(result["rerecommend"])
-        self.assertTrue(result.get("browse_not_compare"))
-        self.assertIn("系列浏览", result["answer"])
+        self.assertEqual(result["intent"], "confirm_competitor")
+        self.assertFalse(result["rerecommend"])
+        self.assertNotIn("compare", result)
+        self.assertEqual(result["confirm_card"]["part_number"], "GD32H779")
+        self.assertEqual(result["confirm_card"]["status"], "series")
         self.assertNotIn("MK64", result["answer"])
 
-    def test_bare_competitor_with_series_browses_not_compares(self) -> None:
+    def test_bare_competitor_with_series_asks_to_confirm(self) -> None:
         overlay = {
             "intent": "compare",
             "must": {},
@@ -105,12 +106,11 @@ class NlCompareTests(unittest.TestCase):
                 [],
                 [],
             )
-        self.assertEqual(result["intent"], "refine_must")
+        self.assertEqual(result["intent"], "confirm_competitor")
         self.assertEqual(result["series_prefix"], ["STM32H5"])
-        self.assertTrue(result["rerecommend"])
-        self.assertTrue(result.get("browse_not_compare"))
+        self.assertFalse(result["rerecommend"])
         self.assertNotIn("compare", result)
-        self.assertIn("不是对标", result["answer"])
+        self.assertIn("完整订货号", result["answer"])
 
     def test_any_vendor_compare_uses_uploaded_specs(self) -> None:
         overlay = {
@@ -177,7 +177,7 @@ class NlCompareTests(unittest.TestCase):
         self.assertNotIn("STM32H7", result["compare"]["series_prefix"])
         self.assertEqual(result["compare"]["essential"], [])
 
-    def test_bare_part_without_specs_asks_for_the_datasheet(self) -> None:
+    def test_bare_part_without_specs_asks_to_confirm(self) -> None:
         overlay = {
             "intent": "compare",
             "must": {},
@@ -190,9 +190,9 @@ class NlCompareTests(unittest.TestCase):
         }
         with patch.object(nl_turn.nl_intent, "from_model", return_value=overlay):
             result = nl_turn.handle("替换 GD32H779", {}, None, "allow_risk", [], [])
-        self.assertEqual(result["intent"], "need_specs")
+        self.assertEqual(result["intent"], "confirm_competitor")
         self.assertNotIn("compare", result)
-        self.assertIn("datasheet", result["answer"])
+        self.assertEqual(result["confirm_card"]["status"], "series")
 
     def test_explain_compare_empty_does_not_invent_parts(self) -> None:
         answer = nl_compare.explain_compare(

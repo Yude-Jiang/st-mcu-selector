@@ -44,6 +44,10 @@ Object.assign(COPY.zh, {
   "export.status": "库内状态",
   "export.constraints": "硬约束",
   "export.url": "ST 产品页",
+  "confirm.submit": "确认并推荐",
+  "confirm.needOne": "请至少填写一项硬指标后再推荐。",
+  "confirm.raw": "原文",
+  "confirm.prior": "你上次确认 · {when}",
 });
 Object.assign(COPY.en, {
   "gate.title": "MCU Selector",
@@ -91,4 +95,8 @@ Object.assign(COPY.en, {
   "export.status": "Library status",
   "export.constraints": "Hard constraints",
   "export.url": "ST product page",
+  "confirm.submit": "Confirm and recommend",
+  "confirm.needOne": "Fill in at least one hard spec before recommending.",
+  "confirm.raw": "Source text",
+  "confirm.prior": "Your last confirmation · {when}",
 });

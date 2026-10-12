@@ -9,6 +9,7 @@ from typing import Any
 
 import nl_brief
 import nl_compare
+import nl_confirm
 import nl_ground
 import nl_intent
 import nl_must
@@ -60,8 +61,14 @@ def handle(
     datasheet: dict[str, Any] | None = None,
     lang: str = "zh",
     compact_package: bool = False,
+    confirmed_specs: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cleaned = " ".join(str(text or "").split())
+    if not nl_compare.datasheet_ready(datasheet):
+        # The engineer already confirmed the card. Those values are the specs; do not fetch again.
+        sheet = nl_confirm.sheet_from_confirmed(confirmed_specs)
+        if sheet:
+            datasheet = sheet
     copy = ui_copy.turn(lang)
     price_hit = nl_must.mentions_price(cleaned)
     if len(cleaned) < 2:
@@ -148,24 +155,19 @@ def handle(
         try:
             draft = nl_compare.parse_competitor(cleaned, datasheet=datasheet)
         except nl_compare.NeedSpecs:
-            # No verified competitor specs: never invent them. If the engineer named an
-            # STM32 series (or already has must), browse that series from the database
-            # and label it as browse-not-compare. Otherwise ask for a datasheet.
-            if series_prefix or current_must:
-                intent = "refine_must"
-                draft = None
-                browse_not_compare = True
-                notes_extra = notes_extra + [copy["series_browse"]]
-            else:
-                return _payload(
-                    "need_specs",
-                    copy["need_specs"],
-                    current_must,
-                    application,
-                    policy,
-                    "rules",
-                    series_prefix=series_prefix,
-                )
+            # A part number is not a spec. Show the card and wait; do not browse a series instead.
+            card = nl_confirm.card_for(cleaned, lang)
+            result = _payload(
+                "confirm_competitor",
+                card["answer"],
+                current_must,
+                application,
+                policy,
+                "rules",
+                series_prefix=series_prefix,
+            )
+            result["confirm_card"] = card["confirm_card"]
+            return result
         except ValueError:
             if current_must or series_prefix:
                 intent = "refine_must"

@@ -38,6 +38,7 @@ class SelectionApiTests(unittest.TestCase):
         self.assertNotIn("为什么是这三颗", response.text)
         self.assertNotIn("继续问", response.text)
         self.assertIn("showBrief", Path(ROOT / "web" / "turn.js").read_text(encoding="utf-8"))
+        self.assertIn("./confirm.js", response.text)
         self.assertIn("name=\"motor_timers\"", response.text)
         self.assertIn("name=\"hrtim\"", response.text)
         self.assertIn("name=\"usb\"", response.text)
@@ -337,6 +338,18 @@ class SelectionApiTests(unittest.TestCase):
         self.assertIn("还不够检索", answer)
         self.assertNotIn("MK64", answer)
         self.assertNotIn("NXP MK64", answer)
+
+    def test_turn_competitor_waits_for_confirmation(self) -> None:
+        os.environ.pop("VITE_DEEPSEEK_API_KEY", None)
+        os.environ.pop("DEEPSEEK_API_KEY", None)
+        os.environ.pop("ST_MCU_LLM_KEY", None)
+        response = self.client.post("/api/turn", json={"text": "替换 GD32H779", "candidates": []})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["intent"], "confirm_competitor")
+        self.assertEqual(payload["confirm_card"]["status"], "series")
+        self.assertNotIn("recommendations", payload)
+        self.assertNotIn("compare", payload)
 
     def test_miniprogram_webview_opens_mp_page(self) -> None:
         cfg = Path(ROOT / "miniprogram" / "config.js").read_text(encoding="utf-8")

@@ -66,6 +66,62 @@
   background: var(--st-gray-1);
 }
 
+.confirm-card {
+  padding: 12px 16px 16px;
+  background: var(--st-white);
+}
+
+.confirm-card p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--st-navy);
+}
+
+.confirm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.confirm-field span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--st-navy);
+}
+
+.confirm-field input {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 16px;
+  min-height: 44px;
+  border: 1px solid var(--st-gray-2);
+  padding: 0 8px;
+  color: var(--st-navy);
+  background: var(--st-white);
+}
+
+.confirm-src {
+  font-size: 12px;
+  color: var(--st-slate);
+  overflow-wrap: anywhere;
+}
+
+.confirm-src a {
+  color: var(--st-navy);
+}
+
+.confirm-card button {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  background: var(--st-navy);
+  color: var(--st-white);
+  cursor: pointer;
+}
+
 .history-panel summary::-webkit-details-marker {
   display: none;
 }

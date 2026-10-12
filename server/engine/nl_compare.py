@@ -44,7 +44,7 @@ SOURCE_RE = re.compile(r"(来源|datasheet|数据手册|手册)\s*[:：]?\s*(.+)
 URL_RE = re.compile(r"https?://\S+", re.I)
 SPEC_KEYS = (
     "frequency_mhz", "flash_kb", "ram_kb", "pin_count", "package_type",
-    "temperature_max_c", "fdcan", "usb", "motor_timers", "hrtim",
+    "temperature_max_c", "fdcan", "usb", "i2c", "motor_timers", "hrtim",
 )
 CORE_KEYS = {"frequency_mhz", "flash_kb", "ram_kb", "pin_count", "package_type"}
 NEED_SPECS = (
@@ -189,6 +189,10 @@ def sanitize_specs(raw: dict[str, Any]) -> dict[str, Any]:
 
 def _reason_from_cards(competitor: dict[str, Any], items: list[dict[str, Any]], lang: str = "zh") -> str:
     return nl_brief.for_compare(competitor, items, lang=lang)
+
+
+def competitor_part(text: str) -> str:
+    return _part_number(text)
 
 
 def _part_number(text: str) -> str:
